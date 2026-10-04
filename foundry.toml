@@ -37,3 +37,10 @@ bracket_spacing = true
 int_types = "long"
 quote_style = "double"
 wrap_comments = true
+
+[lint]
+# `block-timestamp` is spec-mandated here, not an accident: VestingFactory V3
+# validates `start != 0 && start < block.timestamp`, and TestToken FR-014a gates
+# the faucet with `block.timestamp < last + 24h`. Second-level validator skew
+# cannot change either rule's outcome.
+exclude_lints = ["block-timestamp"]
