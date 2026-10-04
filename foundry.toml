@@ -36,5 +36,4 @@ tab_width = 4
 bracket_spacing = true
 int_types = "long"
 quote_style = "double"
-number_format = "preserve"
 wrap_comments = true

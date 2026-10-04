@@ -1,0 +1,71 @@
+# CI gates from the constitution (fmt/build/test, frontend lint/tsc/test/build,
+# >= 95% line coverage). Fuzz/invariant seeds are fixed in foundry.toml
+# [profile.ci] (research R10) — FOUNDRY_PROFILE=ci selects them.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  contracts:
+    name: Contracts — fmt, build, test, coverage gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (with OpenZeppelin submodule)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: forge fmt --check
+        run: forge fmt --check
+
+      - name: forge build --deny warnings
+        run: forge build --deny warnings
+
+      - name: forge test (unit + fuzz + invariant, fixed seeds)
+        run: forge test -vvv
+
+      - name: Coverage gate (>= 95% line coverage on src/)
+        run: ./script/coverage-gate.sh
+
+  frontend:
+    name: Frontend — lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (exact pins)
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test (Vitest)
+        run: npm test
+
+      - name: Build (Vite)
+        run: npm run build

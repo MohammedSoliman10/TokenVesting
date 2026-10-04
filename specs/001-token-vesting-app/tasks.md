@@ -34,17 +34,17 @@ Contracts live at repo root (`src/`, `test/`, `script/`); frontend in
 
 **Purpose**: Project initialization and basic structure per plan.md
 
-- [ ] T001 Verify the root `.gitignore` (repository already initialized — do NOT re-init) with these rules: ignore `.env*` except `.env.example`, `out/`, `cache/`, `node_modules/`, `dist/` — explicitly DO NOT ignore `frontend/src/contracts/`, it is committed per research R6 — at `.gitignore`
-- [ ] T002 Create Foundry config `foundry.toml` with `solc = "0.8.28"` (exact, no floating pragma), fmt settings, fuzz/invariant seeds, coverage config, and `fs_permissions` allowing the deploy script to `read = ["out/"]` and `write = ["frontend/src/contracts/"]` at `foundry.toml`
-- [ ] T003 [P] Install OpenZeppelin v5 pinned to an exact tag via `forge install OpenZeppelin/openzeppelin-contracts@v5.x.y` and write import aliases in `remappings.txt` (no GitHub URL imports)
-- [ ] T004 [P] Scaffold the Vite + React + TypeScript app in `frontend/` with pinned dependencies: react, vite, typescript, tailwindcss, wagmi, viem, @tanstack/react-query, @rainbow-me/rainbowkit, recharts, react-hook-form, zod, vitest, @testing-library/react, @fontsource/space-grotesk, @fontsource/inter in `frontend/package.json`
-- [ ] T005 [P] Configure Tailwind tokens exactly per `docs/design/theme.md`: colors canvas #FFFFFF, paper #FAF7F2, ink #111111, coral #FD9898, soft #FFE2DB; fontFamily display "Space Grotesk", body "Inter"; borderRadius tile 12px; boxShadow rest `0 4px 0 #111111`, hover `0 6px 0 #111111`, press `0 0 0 #111111`; self-host fonts in `frontend/src/index.css`
-- [ ] T006 [P] Create `frontend/.env.example` documenting `VITE_RPC_URL`, `VITE_WALLETCONNECT_PROJECT_ID`, `VITE_CHAIN_ID` (default 11155111) and confirm `.env*` gitignore rules in `.gitignore`
-- [ ] T007 [P] Create `frontend/vercel.json` with a rewrite sending all non-asset paths to `/index.html` (SPA deep-link refresh, quickstart V14)
-- [ ] T008 [P] Write coverage gate script filtering coverage to core contracts under `src/` and failing if line coverage < 95% at `script/coverage-gate.sh`
-- [ ] T009 [P] Create GitHub Actions workflow: contracts job (`forge fmt --check`, `forge build --deny warnings`, `forge test`, `script/coverage-gate.sh` with fixed fuzz/invariant seeds) and frontend job (`npm ci`, lint, `tsc --noEmit`, `vitest run`, `vite build`) at `.github/workflows/ci.yml`
-- [ ] T010 [P] Create repository `README.md` skeleton linking to `specs/001-token-vesting-app/quickstart.md` with a placeholder for the deployed site URL
-- [ ] T011 [P] Configure ESLint and Vitest (jsdom, setup files) for the frontend at `frontend/eslint.config.js` and `frontend/vite.config.ts`
+- [X] T001 Verify the root `.gitignore` (repository already initialized — do NOT re-init) with these rules: ignore `.env*` except `.env.example`, `out/`, `cache/`, `node_modules/`, `dist/` — explicitly DO NOT ignore `frontend/src/contracts/`, it is committed per research R6 — at `.gitignore`
+- [X] T002 Create Foundry config `foundry.toml` with `solc = "0.8.28"` (exact, no floating pragma), fmt settings, fuzz/invariant seeds, coverage config, and `fs_permissions` allowing the deploy script to `read = ["out/"]` and `write = ["frontend/src/contracts/"]` at `foundry.toml`
+- [X] T003 [P] Install OpenZeppelin v5 pinned to an exact tag via `forge install OpenZeppelin/openzeppelin-contracts@v5.x.y` and write import aliases in `remappings.txt` (no GitHub URL imports)
+- [X] T004 [P] Scaffold the Vite + React + TypeScript app in `frontend/` with pinned dependencies: react, vite, typescript, tailwindcss, wagmi, viem, @tanstack/react-query, @rainbow-me/rainbowkit, recharts, react-hook-form, zod, vitest, @testing-library/react, @fontsource/space-grotesk, @fontsource/inter in `frontend/package.json`
+- [X] T005 [P] Configure Tailwind tokens exactly per `docs/design/theme.md`: colors canvas #FFFFFF, paper #FAF7F2, ink #111111, coral #FD9898, soft #FFE2DB; fontFamily display "Space Grotesk", body "Inter"; borderRadius tile 12px; boxShadow rest `0 4px 0 #111111`, hover `0 6px 0 #111111`, press `0 0 0 #111111`; self-host fonts in `frontend/src/index.css`
+- [X] T006 [P] Create `frontend/.env.example` documenting `VITE_RPC_URL`, `VITE_WALLETCONNECT_PROJECT_ID`, `VITE_CHAIN_ID` (default 11155111) and confirm `.env*` gitignore rules in `.gitignore`
+- [X] T007 [P] Create `frontend/vercel.json` with a rewrite sending all non-asset paths to `/index.html` (SPA deep-link refresh, quickstart V14)
+- [X] T008 [P] Write coverage gate script filtering coverage to core contracts under `src/` and failing if line coverage < 95% at `script/coverage-gate.sh`
+- [X] T009 [P] Create GitHub Actions workflow: contracts job (`forge fmt --check`, `forge build --deny warnings`, `forge test`, `script/coverage-gate.sh` with fixed fuzz/invariant seeds) and frontend job (`npm ci`, lint, `tsc --noEmit`, `vitest run`, `vite build`) at `.github/workflows/ci.yml`
+- [X] T010 [P] Create repository `README.md` skeleton linking to `specs/001-token-vesting-app/quickstart.md` with a placeholder for the deployed site URL
+- [X] T011 [P] Configure ESLint and Vitest (jsdom, setup files) for the frontend at `frontend/eslint.config.js` and `frontend/vite.config.ts`
 
 ---
 
@@ -54,11 +54,11 @@ Contracts live at repo root (`src/`, `test/`, `script/`); frontend in
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T012 [P] Create the generated-artifacts wiring `frontend/src/contracts/index.ts` that loads `frontend/src/contracts/deployments.json` and `frontend/src/contracts/abis/*.json` and exposes address-by-`VITE_CHAIN_ID` lookup; commit initial placeholder `deployments.json` (`{}`) and `abis/` files (committed to git per research R6)
-- [ ] T013 [P] Set up wagmi + viem + RainbowKit + TanStack Query providers with Sepolia (11155111) and anvil (31337) chains and the app shell routes `/`, `/create`, `/dashboard` at `frontend/src/lib/wagmi.ts`, `frontend/src/App.tsx`, `frontend/src/main.tsx`
-- [ ] T014 [P] Build the `PressTile` primitive (2px ink outline, 12px radius, hard-offset shadow rest 4px / hover 6px / press 0px, ~100ms transition) and the `Button`, `Card`, `Tab` components built on it at `frontend/src/components/primitives/`
-- [ ] T015 [P] Build shared state components — Loading skeleton, Empty, Error-with-retry, TxStatus chip (pending/confirmed/failed) — at `frontend/src/components/states/`
-- [ ] T016 [P] Create the `useTxStatus` hook implementing `TxState` (`type: 'approve' | 'create' | 'claim' | 'faucet'`, `status: 'idle' | 'pending' | 'confirmed' | 'failed'`) and a custom-error decode helper skeleton at `frontend/src/hooks/useTxStatus.ts` and `frontend/src/lib/errors.ts`
+- [X] T012 [P] Create the generated-artifacts wiring `frontend/src/contracts/index.ts` that loads `frontend/src/contracts/deployments.json` and `frontend/src/contracts/abis/*.json` and exposes address-by-`VITE_CHAIN_ID` lookup; commit initial placeholder `deployments.json` (`{}`) and `abis/` files (committed to git per research R6)
+- [X] T013 [P] Set up wagmi + viem + RainbowKit + TanStack Query providers with Sepolia (11155111) and anvil (31337) chains and the app shell routes `/`, `/create`, `/dashboard` at `frontend/src/lib/wagmi.ts`, `frontend/src/App.tsx`, `frontend/src/main.tsx`
+- [X] T014 [P] Build the `PressTile` primitive (2px ink outline, 12px radius, hard-offset shadow rest 4px / hover 6px / press 0px, ~100ms transition) and the `Button`, `Card`, `Tab` components built on it at `frontend/src/components/primitives/`
+- [X] T015 [P] Build shared state components — Loading skeleton, Empty, Error-with-retry, TxStatus chip (pending/confirmed/failed) — at `frontend/src/components/states/`
+- [X] T016 [P] Create the `useTxStatus` hook implementing `TxState` (`type: 'approve' | 'create' | 'claim' | 'faucet'`, `status: 'idle' | 'pending' | 'confirmed' | 'failed'`) and a custom-error decode helper skeleton at `frontend/src/hooks/useTxStatus.ts` and `frontend/src/lib/errors.ts`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel
 

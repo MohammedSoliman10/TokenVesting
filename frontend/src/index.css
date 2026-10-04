@@ -1,0 +1,93 @@
+/* Token Vesting — "Plinth" theme (docs/design/theme.md, task T005)
+   Tailwind v4: tokens live in @theme, utilities are generated from them. */
+
+/* Self-hosted fonts (no external CDN — no third-party requests at runtime) */
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/700.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+
+@import "tailwindcss";
+
+/* ---- Design tokens (exact values from docs/design/theme.md) ---- */
+@theme {
+  /* Colors */
+  --color-canvas: #ffffff;
+  --color-paper: #faf7f2;
+  --color-ink: #111111;
+  --color-coral: #fd9898;
+  --color-soft: #ffe2db;
+
+  /* Typography */
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Shape */
+  --radius-tile: 12px;
+
+  /* Hard offset shadows, no blur (rest / hover / press) */
+  --shadow-rest: 0 4px 0 #111111;
+  --shadow-hover: 0 6px 0 #111111;
+  --shadow-press: 0 0 0 #111111;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+}
+
+@layer components {
+  /* Core primitive: stacked offset "press tile"
+     rest 4px / hover 6px + soft bg / press 0 + translate down + coral bg,
+     ~100ms transition, no blur, no gradients (theme.md). */
+  .press-tile {
+    border: 2px solid var(--color-ink);
+    border-radius: var(--radius-tile);
+    box-shadow: var(--shadow-rest);
+    transition:
+      box-shadow 100ms linear,
+      transform 100ms linear,
+      background-color 100ms linear;
+  }
+
+  .press-tile:hover {
+    box-shadow: var(--shadow-hover);
+    background-color: var(--color-soft);
+  }
+
+  .press-tile:active {
+    box-shadow: var(--shadow-press);
+    transform: translateY(4px);
+    background-color: var(--color-coral);
+  }
+
+  /* Small label style: uppercase, wide tracking, muted ink (theme.md) */
+  .label {
+    font-family: var(--font-body);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--color-ink) 60%, transparent);
+  }
+}
