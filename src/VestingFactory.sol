@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title VestingFactory
 /// @notice Single contract holding every vesting schedule (mapping design,
@@ -12,7 +13,7 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 /// @dev Months are 30-day months; cliffs and durations are whole multiples of
 ///      the 90-day interval, which guarantees `duration / 90 days >= 1`
 ///      (no division by zero, FR-003). Identifier spelled `beneficiary` (FR-005).
-contract VestingFactory {
+contract VestingFactory is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice Length of one month in this system: 30 days (data-model constant).
@@ -59,11 +60,9 @@ contract VestingFactory {
     /// @notice Reverts when the pull delivers less than `amount` — fee-on-transfer tokens are
     /// rejected (FR-006, V7).
     error FeeOnTransferRejected();
-    /// @notice Reverts when a release is attempted with nothing releasable (FR-010, US2 —
-    /// implemented with `release`).
+    /// @notice Reverts when a release is attempted with nothing releasable (FR-010, US2).
     error NothingToRelease();
-    /// @notice Reverts when an unknown schedule id is used (FR-011, US2 — implemented with
-    /// `release`).
+    /// @notice Reverts when an unknown schedule id is used (FR-011, US2).
     error ScheduleNotFound();
 
     /// @notice Emitted when a schedule is created and atomically funded (FR-012).
@@ -86,8 +85,10 @@ contract VestingFactory {
         uint256 totalAmount
     );
 
-    /// @notice Emitted when vested tokens are released to the beneficiary (FR-012, US2 — emitted
-    /// with `release`).
+    /// @notice Emitted when vested tokens are released to the beneficiary (FR-012, US2).
+    /// @param id Schedule that paid out.
+    /// @param beneficiary Receiver of the tokens (FR-005).
+    /// @param amount Exact amount paid out.
     event TokensReleased(uint256 indexed id, address indexed beneficiary, uint256 amount);
 
     /// @dev Schedule records by id; id 0 is the reserved "not found" record.
@@ -211,5 +212,93 @@ contract VestingFactory {
     /// @return Schedule ids in creation order; empty if none.
     function getSchedulesByGrantor(address grantor) external view returns (uint256[] memory) {
         return grantorSchedules[grantor];
+    }
+
+    /// @notice Vested tokens of schedule `id` at `block.timestamp` (FR-009, US2).
+    /// @dev Step formula: `0` strictly before the cliff; `totalAmount` at/after
+    ///      `start + duration`; otherwise
+    ///      `totalAmount * ((now - start) / 90 days) / (duration / 90 days)` with floor
+    ///      division. Because `duration` is a whole multiple of the 90-day interval,
+    ///      `duration / 90 days >= 1` (no division by zero) and the middle branch can never
+    ///      exceed `totalAmount`.
+    /// @param id Schedule id; `ScheduleNotFound()` for id 0 or an id above `scheduleCount`.
+    /// @return Vested amount in base units — never above `totalAmount`.
+    function vestedAmount(uint256 id) external view returns (uint256) {
+        return _vestedAmount(_getScheduleOrRevert(id));
+    }
+
+    /// @notice Tokens of schedule `id` that are vested but not yet released (FR-010, US2).
+    /// @dev `vestedAmount(id) - released(id)`. Releases only ever pay out already-vested
+    ///      tokens and `vestedAmount` is monotone in time, so the subtraction never
+    ///      underflows.
+    /// @param id Schedule id; `ScheduleNotFound()` for id 0 or an id above `scheduleCount`.
+    /// @return Amount currently claimable by anyone through `release(id)`.
+    function releasableAmount(uint256 id) external view returns (uint256) {
+        Schedule storage schedule = _getScheduleOrRevert(id);
+        return _vestedAmount(schedule) - schedule.released;
+    }
+
+    /// @notice Tokens of schedule `id` already released to the beneficiary (FR-011, US2).
+    /// @dev Always `<= totalAmount` (SC-004) and never decreases: `release` only ever adds
+    ///      the currently releasable amount.
+    /// @param id Schedule id; `ScheduleNotFound()` for id 0 or an id above `scheduleCount`.
+    /// @return Cumulative amount paid out so far, in base units.
+    function released(uint256 id) external view returns (uint256) {
+        return _getScheduleOrRevert(id).released;
+    }
+
+    /// @notice Releases the currently releasable tokens of schedule `id` to its beneficiary
+    ///         (FR-010, US2).
+    /// @dev Permissionless: anyone may call, but the payout always goes to the beneficiary.
+    ///      Follows checks-effects-interactions — `released` is increased before the token
+    ///      moves — and the whole function is guarded by `nonReentrant`, so a malicious token
+    ///      re-entering `release` cannot claim twice. Only the releasable amount is sent; the
+    ///      unvested remainder stays in the factory for later intervals.
+    /// @param id Schedule id; `ScheduleNotFound()` for id 0 or an id above `scheduleCount`.
+    /// @return amount Exact amount paid out to the beneficiary (in base units).
+    ///      Reverts with `NothingToRelease()` when nothing is vested beyond what is already
+    ///      released.
+    function release(uint256 id) external nonReentrant returns (uint256 amount) {
+        Schedule storage schedule = _getScheduleOrRevert(id);
+        uint256 vested = _vestedAmount(schedule);
+        amount = vested - schedule.released;
+        if (amount == 0) {
+            revert NothingToRelease();
+        }
+
+        // Effects first: record the payout before any token moves (re-entrancy safe).
+        schedule.released += amount;
+        IERC20(schedule.token).safeTransfer(schedule.beneficiary, amount);
+
+        emit TokensReleased(id, schedule.beneficiary, amount);
+    }
+
+    /// @dev Shared id validation for the US2 entry points (FR-011): id 0 is reserved and ids
+    ///      above `scheduleCounter` were never created.
+    /// @param id Schedule id to resolve.
+    /// @return schedule Storage pointer to the stored schedule.
+    ///      Reverts with `ScheduleNotFound()` if `id` is 0 or above `scheduleCount`.
+    function _getScheduleOrRevert(uint256 id) internal view returns (Schedule storage schedule) {
+        if (id == 0 || id > scheduleCounter) {
+            revert ScheduleNotFound();
+        }
+        schedule = schedules[id];
+    }
+
+    /// @dev Shared vesting math (FR-009): the spec step formula over 90-day intervals.
+    /// @param schedule Storage pointer to an existing schedule.
+    /// @return Vested amount in base units at `block.timestamp`.
+    function _vestedAmount(Schedule storage schedule) internal view returns (uint256) {
+        // Strictly before the cliff (covers "before start" too: cliffDuration >= 0).
+        if (block.timestamp < schedule.start + schedule.cliffDuration) {
+            return 0;
+        }
+        // At/after start + duration the schedule is fully vested — and never more.
+        if (block.timestamp >= schedule.start + schedule.duration) {
+            return schedule.totalAmount;
+        }
+        uint256 completedIntervals = (block.timestamp - schedule.start) / INTERVAL;
+        uint256 totalIntervals = schedule.duration / INTERVAL;
+        return (schedule.totalAmount * completedIntervals) / totalIntervals;
     }
 }
