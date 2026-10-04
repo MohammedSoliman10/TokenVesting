@@ -11,5 +11,8 @@ export default defineConfig({
     setupFiles: ['./test/setup.ts'],
     include: ['test/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    // Tests run against the committed anvil deployment (chain 31337) so
+    // `contractAddress(activeChainId, ...)` resolves without a live chain.
+    env: { VITE_CHAIN_ID: '31337' },
   },
 });
