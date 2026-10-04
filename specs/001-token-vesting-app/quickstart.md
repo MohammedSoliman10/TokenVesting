@@ -32,8 +32,10 @@ npm ci
 anvil
 
 # Terminal 2 — deploy; writes addresses + ABIs into frontend/src/contracts/
-# (anvil's default accounts are unlocked — no raw keys on the command line)
-forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --unlocked
+# --unlocked uses anvil's pre-unlocked accounts (no raw keys on the command
+# line); --sender must be anvil account #0, otherwise forge picks its default
+# sender, which is NOT unlocked on anvil, and the script fails.
+forge script script/Deploy.s.sol --rpc-url http://127.0.0.1:8545 --broadcast --unlocked --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
 # Terminal 3 — app
 cd frontend && npm run dev         # open the printed localhost URL
@@ -47,10 +49,10 @@ chain and lists them without any hardcoded addresses.
 
 | # | Scenario | Steps | Expected outcome | Proves |
 |---|----------|-------|------------------|--------|
-| V1 | Grantor creates + funds a schedule | Connect wallet (anvil) → mint test tokens (owner faucet) → `/create` → fill valid form (start **now**) → approve → create | Schedule listed with exact params; grantor balance decreased by full amount; `ScheduleCreated` emitted | US1, FR-001/002/019, SC-001 |
+| V1 | Grantor creates + funds a schedule | Connect wallet (anvil) → fund via "Get test tokens" (faucet) or owner `mint` → `/create` → fill valid form (start **now**) → approve → create | Schedule listed with exact params; grantor balance decreased by full amount; `ScheduleCreated` emitted | US1, FR-001/002/014a/019, SC-001 |
 | V2 | Inline validation before wallet prompts | Enter: past start, 4-month duration, 1-month cliff, zero amount, zero address | Each blocked with a specific field error; **no** wallet popup appears | US1.2, FR-003/018, Clar. 1–2 |
 | V3 | Nothing releasable before cliff | Create schedule with cliff ≥ 3 months → view `/dashboard` immediately | Releasable = 0, claim button disabled with "nothing vested yet" | US2.1, SC-003 |
-| V4 | Cliff + interval unlock math | `cast evm_increaseTime` past cliff and one interval → reload dashboard | Releasable = (completed intervals ÷ total) × total − released; claim transfers exactly that amount; `TokensReleased` emitted | US2.2–2.3, FR-008/010 |
+| V4 | Cliff + interval unlock math | `cast rpc evm_increaseTime <seconds>` past cliff and one interval, then `cast rpc evm_mine` → reload dashboard | Releasable = (completed intervals ÷ total) × total − released; claim transfers exactly that amount; `TokensReleased` emitted | US2.2–2.3, FR-008/010 |
 | V5 | Partial claims never double-spend | Claim at interval 1, warp again, claim at interval 2 | Only newly vested amount claimable; `released` always ≤ `totalAmount` | US2.4, FR-010 |
 | V6 | Fully vested at end | Warp to `start + duration` → claim remainder | Releasable = total − released; after claim: releasable 0, progress 100%, 0 tokens stranded | US2.5, SC-004 |
 | V7 | Zero-release blocked | Call `release(id)` when nothing is due (UI + `cast send`) | UI prevents; contract reverts `NothingToRelease()` — no zero-value transfer | FR-013, edge case |

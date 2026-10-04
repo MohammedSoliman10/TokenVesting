@@ -34,7 +34,7 @@ Contracts live at repo root (`src/`, `test/`, `script/`); frontend in
 
 **Purpose**: Project initialization and basic structure per plan.md
 
-- [ ] T001 Initialize the git repository and create `.gitignore` (ignore `.env*` except `.env.example`, `out/`, `cache/`, `node_modules/`, `dist/` — explicitly DO NOT ignore `frontend/src/contracts/`, it is committed per research R6) at `.gitignore`
+- [ ] T001 Verify the root `.gitignore` (repository already initialized — do NOT re-init) with these rules: ignore `.env*` except `.env.example`, `out/`, `cache/`, `node_modules/`, `dist/` — explicitly DO NOT ignore `frontend/src/contracts/`, it is committed per research R6 — at `.gitignore`
 - [ ] T002 Create Foundry config `foundry.toml` with `solc = "0.8.28"` (exact, no floating pragma), fmt settings, fuzz/invariant seeds, coverage config, and `fs_permissions` allowing the deploy script to `read = ["out/"]` and `write = ["frontend/src/contracts/"]` at `foundry.toml`
 - [ ] T003 [P] Install OpenZeppelin v5 pinned to an exact tag via `forge install OpenZeppelin/openzeppelin-contracts@v5.x.y` and write import aliases in `remappings.txt` (no GitHub URL imports)
 - [ ] T004 [P] Scaffold the Vite + React + TypeScript app in `frontend/` with pinned dependencies: react, vite, typescript, tailwindcss, wagmi, viem, @tanstack/react-query, @rainbow-me/rainbowkit, recharts, react-hook-form, zod, vitest, @testing-library/react, @fontsource/space-grotesk, @fontsource/inter in `frontend/package.json`
@@ -80,19 +80,19 @@ params; every invalid input blocked inline with no wallet prompt)
 - [ ] T018 [P] [US1] Create a fee-on-transfer mock ERC-20 (deducts a tax on transfer) for funding tests — in `test/mocks/FeeOnTransferToken.sol`
 - [ ] T019 [P] [US1] Contract tests FIRST: validation matrix — token/beneficiary zero → `ZeroAddress()`; `start != 0 && start < block.timestamp` → `InvalidStart()`; `durationMonths == 0 || durationMonths % 3 != 0` → `InvalidDuration()`; `cliffMonths % 3 != 0 || cliffMonths > durationMonths` → `InvalidCliff()`; `amount == 0` → `ZeroAmount()`; `start == 0` resolves to `block.timestamp` — in `test/unit/VestingFactory.Validation.t.sol`
 - [ ] T020 [US1] Contract tests FIRST: funding — atomic `transferFrom` pull leaves schedule fully funded; insufficient balance → `InsufficientBalance()`; insufficient allowance → `InsufficientAllowance()`; fee-on-transfer token → `FeeOnTransferRejected()` and no schedule exists (depends on T018) — in `test/unit/VestingFactory.Funding.t.sol`
-- [ ] T021 [P] [US1] Contract tests FIRST: `ScheduleCreated` event fields; `beneficiarySchedules`/`grantorSchedules` indexes; one grantor creates many schedules with no redeployment; identifier spelled `beneficiary` — in `test/unit/VestingFactory.Indexes.t.sol`
+- [ ] T021 [P] [US1] Contract tests FIRST: `ScheduleCreated` event fields; `getSchedulesByBeneficiary`/`getSchedulesByGrantor` index reads; one grantor creates many schedules with no redeployment; identifier spelled `beneficiary` — in `test/unit/VestingFactory.Indexes.t.sol`
 
 ### Implementation for User Story 1
 
-- [ ] T022 [US1] Implement `src/TestToken.sol` (OZ ERC20 + Ownable, owner `mint`, public `faucet()` limited to once per 24h per address with `FaucetCooldown()` and `lastFaucetAt(address)`, 18 decimals) per `specs/001-token-vesting-app/contracts/TestToken.md` (green T017)
-- [ ] T023 [US1] Implement `src/VestingFactory.sol`: `Schedule` struct, `createSchedule` with the full validation matrix, 0-sentinel start rule, atomic pull with balance-before/after delta check, `ScheduleCreated` event, and on-chain beneficiary/grantor indexes per `specs/001-token-vesting-app/contracts/VestingFactory.md` (green T019–T021)
+- [ ] T022 [US1] Implement `src/TestToken.sol` (OZ ERC20 + Ownable, owner `mint`, public `faucet()` limited to once per 24h per address with `FaucetCooldown()` and `lastFaucetAt(address)`, 18 decimals) per `specs/001-token-vesting-app/contracts/TestToken.md`, with full NatSpec on every public/external function (constitution I) (green T017)
+- [ ] T023 [US1] Implement `src/VestingFactory.sol`: `Schedule` struct, `createSchedule` with the full validation matrix, 0-sentinel start rule, atomic pull with balance-before/after delta check, `ScheduleCreated` event, and on-chain beneficiary/grantor indexes (internal storage, external reads only via `getSchedulesBy*`) with full NatSpec on every public/external function (constitution I) per `specs/001-token-vesting-app/contracts/VestingFactory.md` (green T019–T021)
 - [ ] T024 [US1] Implement deploy script that deploys TestToken + VestingFactory and writes addresses and ABIs into `frontend/src/contracts/` using cheatcodes (`vm.readFile`/`vm.parseJson`/`vm.writeJson`, covered by the T002 `fs_permissions`; jq-copy script accepted fallback) — in `script/Deploy.s.sol`
-- [ ] T025 [P] [US1] Create the zod schema mirroring chain rules V1–V6 verbatim (address non-zero, `start === 0 || start >= now`, `durationMonths > 0 && durationMonths % 3 === 0`, `cliffMonths % 3 === 0 && cliffMonths <= durationMonths`, `amount > 0` and ≤ wallet balance) plus the "1 month = 30 days" copy constant — in `frontend/src/lib/schemas.ts`
-- [ ] T026 [P] [US1] Build the "Get test tokens" faucet button driving `faucet()` with `useTxStatus` pending/confirmed/failed — in `frontend/src/components/FaucetButton.tsx`
-- [ ] T027 [US1] Build the create-schedule form (react-hook-form + zod, date picker → Unix seconds, "Start now" → sends 0, "1 month = 30 days" hint wherever cliff/duration is entered, inline errors BEFORE any wallet prompt) — in `frontend/src/pages/CreateSchedule.tsx` (depends T025)
-- [ ] T028 [US1] Implement the approve → create funding flow hook: approval first, create second, reuse a sufficient existing approval, failed-create retry without re-approval — in `frontend/src/hooks/useCreateSchedule.ts` (depends T023, T027)
-- [ ] T029 [US1] Add the post-creation confirmation view listing the new schedule with the exact parameters entered and its creation record/tx link — in `frontend/src/pages/CreateSchedule.tsx`
-- [ ] T030 [P] [US1] Frontend tests FIRST: schema valid/invalid matrix (every V1–V6 rule) and FaucetButton states (idle/pending/confirmed/failed incl. `FaucetCooldown` decode) — in `frontend/test/schemas.test.ts` and `frontend/test/FaucetButton.test.tsx`
+- [ ] T025 [P] [US1] Frontend tests FIRST: schema valid/invalid matrix (every V1–V6 rule) and FaucetButton states (idle/pending/confirmed/failed incl. `FaucetCooldown` decode) — in `frontend/test/schemas.test.ts` and `frontend/test/FaucetButton.test.tsx`
+- [ ] T026 [P] [US1] Create the zod schema mirroring chain rules V1–V6 verbatim (address non-zero, `start === 0 || start >= now`, `durationMonths > 0 && durationMonths % 3 === 0`, `cliffMonths % 3 === 0 && cliffMonths <= durationMonths`, `amount > 0` and ≤ wallet balance) plus the "1 month = 30 days" copy constant — in `frontend/src/lib/schemas.ts` (green T025)
+- [ ] T027 [P] [US1] Build the "Get test tokens" faucet button driving `faucet()` with `useTxStatus` pending/confirmed/failed — in `frontend/src/components/FaucetButton.tsx` (green T025)
+- [ ] T028 [US1] Build the create-schedule form (react-hook-form + zod, date picker → Unix seconds, "Start now" → sends 0, "1 month = 30 days" hint wherever cliff/duration is entered, inline errors BEFORE any wallet prompt) — in `frontend/src/pages/CreateSchedule.tsx` (depends T026)
+- [ ] T029 [US1] Implement the approve → create funding flow hook: approval first, create second, reuse a sufficient existing approval, failed-create retry without re-approval — in `frontend/src/hooks/useCreateSchedule.ts` (depends T023, T028)
+- [ ] T030 [US1] Add the post-creation confirmation view listing the new schedule with the exact parameters entered and its creation record/tx link — in `frontend/src/pages/CreateSchedule.tsx` (depends T028)
 - [ ] T031 [US1] Gate check: `forge fmt --check`, `forge build --deny warnings`, and all US1 `forge test` suites green; US1 Vitest green
 
 **Checkpoint**: User Story 1 fully functional and testable independently (MVP — create + fund + faucet)
@@ -230,7 +230,7 @@ V14 (direct `/dashboard` refresh → no 404)
 
 - Setup tasks T003–T011 are all [P] (independent files)
 - Foundational tasks T012–T016 are all [P]
-- US1 tests T017, T019, T021 (+ T018) run in parallel; US2 tests T032–T036 all parallel; US3 tests T047–T049 parallel; US4 tests T057–T058 parallel
+- US1 tests T017, T019, T021, T025 (+ T018) run in parallel; US2 tests T032–T036 all parallel; US3 tests T047–T049 parallel; US4 tests T057–T058 parallel
 - Once Foundational completes: contract work (US1/US2) and frontend-primitive work (US3/US4) proceed on separate files concurrently
 - Polish tasks T063–T065 and T067 are [P]
 
@@ -245,9 +245,10 @@ Task: "T018 Fee-on-transfer mock → test/mocks/FeeOnTransferToken.sol"
 Task: "T019 Validation matrix tests → test/unit/VestingFactory.Validation.t.sol"
 Task: "T021 Event/index tests → test/unit/VestingFactory.Indexes.t.sol"
 
-# Then frontend pieces in parallel:
-Task: "T025 zod schema → frontend/src/lib/schemas.ts"
-Task: "T026 FaucetButton → frontend/src/components/FaucetButton.tsx"
+# Frontend: tests FIRST, then implementation pieces in parallel:
+Task: "T025 Frontend tests → frontend/test/schemas.test.ts + frontend/test/FaucetButton.test.tsx"
+Task: "T026 zod schema → frontend/src/lib/schemas.ts"
+Task: "T027 FaucetButton → frontend/src/components/FaucetButton.tsx"
 ```
 
 ## Parallel Example: User Story 2

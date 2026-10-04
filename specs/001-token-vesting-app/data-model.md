@@ -53,8 +53,8 @@ to `beneficiary` (clarified decision 4).
 | Index | Type | Purpose |
 |-------|------|---------|
 | `scheduleCount()` | `uint256` | Total schedules, id upper bound |
-| `beneficiarySchedules(address)` | `uint256[]` | Dashboard listing for connected wallet |
-| `grantorSchedules(address)` | `uint256[]` | Grantor's created-schedule history |
+| `beneficiarySchedules(address)` | `uint256[]` (internal storage) | Dashboard listing for connected wallet — read via `getSchedulesByBeneficiary` |
+| `grantorSchedules(address)` | `uint256[]` (internal storage) | Grantor's created-schedule history — read via `getSchedulesByGrantor` |
 | `getSchedule(id)` | struct | Full detail by id |
 | `getSchedulesByBeneficiary(addr)` / `getSchedulesByGrantor(addr)` | `uint256[]` | Id lists (frontend batches `getSchedule` via multicall) |
 
@@ -131,5 +131,5 @@ event TokensReleased(uint256 indexed id, address indexed beneficiary, uint256 am
 Grantor 1 ──── * VestingSchedule * ──── 1 Token
 Beneficiary 1 ── * VestingSchedule
 WalletSession ── connects as either role (identity = connected address)
-Transaction ──── targets 1 VestingSchedule (create / claim) or Token (approve)
+Transaction ──── targets 1 VestingSchedule (create / claim) or Token (approve / faucet)
 ```

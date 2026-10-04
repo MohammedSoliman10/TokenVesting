@@ -45,8 +45,9 @@ interface IVestingFactory {
     // ---- Reads / indexes (FR-004, no event indexer) ----
     function scheduleCount() external view returns (uint256);
     function getSchedule(uint256 id) external view returns (Schedule memory);
-    function beneficiarySchedules(address beneficiary) external view returns (uint256[] memory);
-    function grantorSchedules(address grantor) external view returns (uint256[] memory);
+    // Index storage (`beneficiarySchedules`, `grantorSchedules`) stays
+    // internal; these two accessors are the ONLY external index reads —
+    // one canonical API, no duplicate getters.
     function getSchedulesByBeneficiary(address beneficiary) external view returns (uint256[] memory);
     function getSchedulesByGrantor(address grantor) external view returns (uint256[] memory);
 

@@ -120,7 +120,7 @@ exactly the displayed releasable amount.
    90-day interval has been completed since the start, **When** the dashboard
    loads, **Then** the releasable amount equals (completed intervals ÷ total
    intervals) × total amount, minus anything already released, and the claim
-   button is enabled.
+   button is enabled if and only if that amount is greater than zero (FR-021).
 3. **Given** a releasable amount greater than zero, **When** the beneficiary
    presses claim and confirms in their wallet, **Then** exactly that amount is
    transferred to the beneficiary, the released value increases by that amount,
@@ -372,8 +372,8 @@ per the design theme and offers the connect/create/dashboard entry points.
 - **Wallet Session**: The user's connection to the app: connected address,
   selected network, connection state (disconnected, connected, wrong network).
 - **Transaction**: A user-initiated write action (approve, create schedule,
-  claim). Attributes: type, status (pending, confirmed, failed), reference for
-  inspection, and the schedule or token it affects.
+  claim, faucet). Attributes: type, status (pending, confirmed, failed),
+  reference for inspection, and the schedule or token it affects.
 
 ## Success Criteria *(mandatory)*
 

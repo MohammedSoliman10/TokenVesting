@@ -112,8 +112,8 @@ frontend/
 │   │   └── states/           # Loading / Empty / Error / TxStatus components
 │   ├── pages/                # Landing, CreateSchedule, Dashboard
 │   ├── contracts/            # GENERATED: abis/, deployments.json, index.ts
-│   ├── hooks/                # useSchedules, useVestingProgress, useTxStatus
-│   ├── lib/                  # vesting.ts (progress math), schemas.ts (zod), wagmi.ts, theme.ts
+│   ├── hooks/                # useSchedules, useTxStatus, useCreateSchedule, useEnsureChain
+│   ├── lib/                  # vesting.ts (progress math), schemas.ts (zod), wagmi.ts, errors.ts, theme.ts
 │   ├── App.tsx
 │   └── main.tsx
 ├── test/                     # Vitest + Testing Library (*.test.tsx / *.test.ts)
