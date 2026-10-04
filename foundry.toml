@@ -1,0 +1,40 @@
+# Foundry configuration — Token Vesting (specs/001-token-vesting-app/plan.md)
+
+[profile.default]
+solc = "0.8.28" # exact version, no floating pragma (plan: technical context)
+src = "src"
+test = "test"
+script = "script"
+out = "out"
+libs = ["lib"]
+optimizer = true
+optimizer_runs = 200
+
+# Deterministic fuzz/invariant runs (research R10: reproducible seeds, set in CI)
+fuzz = { runs = 256, seed = "0x5eed" }
+invariant = { runs = 64, depth = 50, fail_on_revert = true }
+
+# Deploy script reads out/ and writes generated addresses + ABIs into the
+# frontend (research R6, T002/T024). Required for vm.readFile/vm.writeJson.
+fs_permissions = [
+    { access = "read", path = "./out" },
+    { access = "read-write", path = "./frontend/src/contracts" },
+]
+
+# Coverage runs through script/coverage-gate.sh (forge coverage --report summary
+# --report lcov; fail < 95% on src/, constitution III / research R11).
+
+# CI profile: same configuration, higher reproducible fuzz runs
+# (FOUNDRY_PROFILE=ci in .github/workflows/ci.yml, research R10)
+[profile.ci]
+fuzz = { runs = 512, seed = "0x5eed" }
+invariant = { runs = 128, depth = 50, fail_on_revert = true }
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = true
+int_types = "long"
+quote_style = "double"
+number_format = "preserve"
+wrap_comments = true
