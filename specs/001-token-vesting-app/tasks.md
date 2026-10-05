@@ -174,7 +174,7 @@ V14 (direct `/dashboard` refresh → no 404)
 
 ### Tests for User Story 4 (REQUIRED — TDD)
 
-- [ ] T057 [P] [US4] Frontend tests FIRST: landing renders public content and connect CTA with no wallet connected — in `frontend/test/Landing.test.tsx`
+- [X] T057 [P] [US4] Frontend tests FIRST: landing renders public content and connect CTA with no wallet connected — in `frontend/test/Landing.test.tsx`
 - [ ] T058 [P] [US4] Frontend tests FIRST: PressTile rest/hover/press styling matches theme tokens (2px ink outline, 12px radius, 4/6/0px offsets, coral press background) — in `frontend/test/PressTile.test.tsx`
 
 ### Implementation for User Story 4

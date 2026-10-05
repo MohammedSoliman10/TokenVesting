@@ -90,4 +90,15 @@
     text-transform: uppercase;
     color: color-mix(in srgb, var(--color-ink) 60%, transparent);
   }
+
+  /* Faint dot grid behind the landing hero (theme.md "Background: white with
+     a faint dot grid"). The radial-gradient of dots is the ONLY gradient the
+     theme allows — no other gradients, no blur, no dark mode. */
+  .dot-grid {
+    background-image: radial-gradient(
+      color-mix(in srgb, var(--color-ink) 16%, transparent) 1.5px,
+      transparent 1.5px
+    );
+    background-size: 18px 18px;
+  }
 }

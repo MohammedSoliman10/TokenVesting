@@ -12,7 +12,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { formatUnits, isAddress, parseUnits } from 'viem';
 import { useAccount, usePublicClient } from 'wagmi';
-import { abiFor, activeChainId, contractAddress } from '../contracts';
+import { abiFor, activeChainId, contractAddress, isDeployed } from '../contracts';
 import { useCreateSchedule, type CreatedSchedule } from '../hooks/useCreateSchedule';
 import type { TxState } from '../hooks/useTxStatus';
 import {
@@ -393,7 +393,7 @@ export default function CreateSchedule() {
         )}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button type="submit" busy={isCreating} disabled={!address}>
+          <Button type="submit" busy={isCreating} disabled={!address || !isDeployed(activeChainId)}>
             Create schedule
           </Button>
           <TxStatus state={state as TxState} />

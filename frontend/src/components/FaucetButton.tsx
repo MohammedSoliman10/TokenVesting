@@ -9,7 +9,7 @@
  */
 import { useEffect } from 'react';
 import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
-import { abiFor, activeChainId, contractAddress } from '../contracts';
+import { abiFor, activeChainId, contractAddress, isDeployed } from '../contracts';
 import { useEnsureChain } from '../hooks/useEnsureChain';
 import { useTxStatus } from '../hooks/useTxStatus';
 import { Button } from './primitives/Button';
@@ -63,7 +63,12 @@ export function FaucetButton() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <WrongNetworkPrompt className="w-full" />
-      <Button type="button" onClick={() => void claim()} busy={busy} disabled={!tokenAddress}>
+      <Button
+        type="button"
+        onClick={() => void claim()}
+        busy={busy}
+        disabled={!tokenAddress || !isDeployed(activeChainId)}
+      >
         Get test tokens
       </Button>
       <TxStatus state={state} />
