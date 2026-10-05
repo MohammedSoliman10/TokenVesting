@@ -72,8 +72,11 @@ TDD order, per the constitution:
    Outcome code `1` = the re-entrant call **succeeded**; `3 != 2` = a second
    schedule was stored during the outer call.
 3. **Guard added**, then **GREEN:** the same suite passes 3/3, the full forge suite
-   passes **62/62**, and coverage stays at **100.00% (72/72 executable lines in `src/`)**,
-   above the 95% gate (`./script/coverage-gate.sh` → “Coverage gate passed.”).
+   passes **62/62** (forge 1.7.1 count at the time — CI's forge 1.8.5 prints
+   **57**, grouping the 6 invariant functions into one suite entry; all 62 test
+   functions run), and coverage stays at **100.00% (72/72 executable lines in
+   `src/` on forge 1.7.1; 73/73 on forge 1.8.5)**, above the 95% gate
+   (`./script/coverage-gate.sh` → “Coverage gate passed.”).
 
 Because OZ's `ReentrancyGuard` uses a single contract-wide status, the guard blocks
 the nested `createSchedule` **and** the nested `release` with
@@ -116,7 +119,7 @@ EIP-170 limit: 24,576 B runtime; EIP-3860: 49,152 B initcode.
 
 Both production contracts are far below the limits.
 
-## 5. Gas (`forge test --gas-report`, 62 tests)
+## 5. Gas (`forge test --gas-report`, 62 test functions)
 
 | Function | Min | Avg | Median | Max | # calls |
 |----------|-----|-----|--------|-----|---------|
@@ -269,9 +272,13 @@ Parsed with `python3 -c "import yaml"` (PyYAML 6.0.3):
   seed = "0x5eed" }`; `[profile.ci] fuzz = { runs = 512, seed = "0x5eed" }`,
   invariant `runs = 128, depth = 50` under `ci` — same seed, more runs. The
   workflow comment (`research R10`) matches the file.
-- **CI-exact run:** `FOUNDRY_PROFILE=ci forge test -vvv` → **exit 0**,
-  `62 tests passed, 0 failed` across 9 test suites (512-run fuzz + 128-run
-  invariants included).
+- **CI-exact run:** local `FOUNDRY_PROFILE=ci forge test -vvv` on forge 1.7.1 gave
+  `62 tests passed, 0 failed`; the **live CI run** (run 37367091887, forge 1.8.5)
+  reports `57 tests passed, 0 failed` across 9 test suites — same **62 test
+  functions**, because forge 1.8.5 groups the 6 invariants into one suite entry —
+  with 512-run fuzz + 128-run invariants (6,400 invariant calls), and its coverage
+  gate prints `100.00% (73/73 executable lines)` (forge 1.8.5 counts one more
+  executable line in `src/` than 1.7.1 did).
 
 ## 10. Verdict
 

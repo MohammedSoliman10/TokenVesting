@@ -1,5 +1,7 @@
 # Token Vesting
 
+![CI](https://github.com/MohammedSoliman10/TokenVesting/actions/workflows/ci.yml/badge.svg)
+
 A small spec-driven dApp for creating, viewing and claiming ERC-20 vesting
 schedules: grantors lock tokens behind a cliff and 90-day release intervals in a
 single unaudited factory contract; beneficiaries watch their vesting progress
@@ -128,7 +130,9 @@ only — never reuse them on a real network.
 ## Tests & gates
 
 ```bash
-# Contracts — unit + fuzz + invariant (fixed seed 0x5eed), 62 tests
+# Contracts — unit + fuzz + invariant (fixed seed 0x5eed): 62 test functions.
+# forge >=1.8.5 (CI's toolchain) prints "57 tests" — it groups the 6 invariant
+# functions into a single suite entry; all 62 still run.
 forge test
 FOUNDRY_PROFILE=ci forge test      # what CI runs: fuzz 512, invariants 128
 
