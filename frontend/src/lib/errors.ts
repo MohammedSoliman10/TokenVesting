@@ -4,8 +4,9 @@
  * viem wraps reverts in nested errors (`BaseError.cause` / `BaseError.walk()`),
  * so decoding walks the chain looking for a custom-error name and falls back
  * to viem's `shortMessage`. The full error → message map for every contract
- * error is completed in task T051; `FaucetCooldown` is mapped up front because
- * the faucet flow (US1, T025/T027) needs it first.
+ * error is completed in task T051; `FaucetCooldown` (faucet flow, T025/T027)
+ * and `NothingToRelease` (claim flow, T044) are mapped up front because those
+ * flows need them first.
  *
  * Rule: users never see raw revert data — only friendly sentences.
  */
@@ -14,7 +15,9 @@
 export const CUSTOM_ERROR_MESSAGES: Record<string, string> = {
   FaucetCooldown:
     'This wallet already claimed test tokens in the last 24 hours. Try again later.',
-  // TODO(T051): NothingToRelease, InvalidStart, InvalidDuration, InvalidCliff,
+  NothingToRelease:
+    'There is nothing to release right now — no tokens have vested since your last claim.',
+  // TODO(T051): InvalidStart, InvalidDuration, InvalidCliff,
   // ZeroAddress, ZeroAmount, InsufficientBalance, InsufficientAllowance,
   // FeeOnTransferRejected, ScheduleNotFound.
 };

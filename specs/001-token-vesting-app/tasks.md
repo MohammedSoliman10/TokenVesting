@@ -116,20 +116,20 @@ end with 0 stranded)
 - [X] T033 [P] [US2] Contract tests FIRST: `release(id)` — callable by anyone but tokens always go to `beneficiary`, sends only the currently releasable amount, `released` never exceeds `totalAmount`, zero releasable → `NothingToRelease()`, `TokensReleased` event, unknown id → `ScheduleNotFound()` — in `test/unit/VestingFactory.Release.t.sol`
 - [X] T034 [P] [US2] Fuzz tests with bounded inputs (amount ≤ 1e30, months ∈ {3..120}, warped timestamps): `releasable == vested - released >= 0`, `vested <= totalAmount`, monotonic vested over time — in `test/fuzz/VestingMath.fuzz.t.sol`
 - [X] T035 [P] [US2] Invariant tests with handler: `released <= totalAmount` (SC-004), `vested == 0` before cliff (SC-003), `vested == totalAmount` at end, `released` never decreases — in `test/invariant/VestingInvariant.t.sol` + `test/invariant/VestingHandler.sol`
-- [ ] T036 [P] [US2] Frontend tests FIRST: pure vesting-progress math (state classification not-started/cliff/vesting/fully-vested, progress %, next unlock, releasable display) — in `frontend/test/vesting.test.ts`
+- [X] T036 [P] [US2] Frontend tests FIRST: pure vesting-progress math (state classification not-started/cliff/vesting/fully-vested, progress %, next unlock, releasable display) — in `frontend/test/vesting.test.ts`
 
 ### Implementation for User Story 2
 
 - [X] T037 [US2] Implement the vesting views `vestedAmount(id)`, `releasableAmount(id)`, `released(id)` and interval math in `src/VestingFactory.sol` (green T032, T034)
 - [X] T038 [US2] Implement `release(uint256 id)` with checks-effects-interactions, `SafeERC20.safeTransfer`, and `ReentrancyGuard.nonReentrant` in `src/VestingFactory.sol` (green T033, T035)
-- [ ] T039 [US2] Create pure progress-math library shared by chart, progress bar, and claim gating — in `frontend/src/lib/vesting.ts` (green T036)
-- [ ] T040 [P] [US2] Create the schedules read hook: `getSchedulesByBeneficiary` → ids → `getSchedule` batched via viem multicall, TanStack Query keyed by chain/address with block refetch — in `frontend/src/hooks/useSchedules.ts`
-- [ ] T041 [P] [US2] Build the schedule card and vesting progress bar using the press-tile primitives (token, total, released, releasable, progress) — in `frontend/src/components/ScheduleCard.tsx` and `frontend/src/components/VestingProgress.tsx`
-- [ ] T042 [P] [US2] Build the Recharts vesting timeline marking start, cliff, each 90-day unlock, and end with vested step-line and claimed marks — in `frontend/src/components/VestingTimeline.tsx`
-- [ ] T043 [US2] Build the dashboard page: list, detail view, loading placeholders, error-with-retry, and the empty state for wallets with no schedules — in `frontend/src/pages/Dashboard.tsx` (depends T040)
-- [ ] T044 [US2] Build the claim button: enabled if and only if releasable > 0, claims exactly the currently releasable amount, TxState status, disabled with "nothing vested yet" before cliff — in `frontend/src/components/ClaimButton.tsx`
-- [ ] T045 [P] [US2] Frontend tests: dashboard loading/empty/error rendering, claim gating rules, non-beneficiary sees no claim action — in `frontend/test/Dashboard.test.tsx` and `frontend/test/ClaimButton.test.tsx`
-- [ ] T046 [US2] Gate check: all `forge test` (unit + fuzz + invariant) green; `./script/coverage-gate.sh` passes; US2 Vitest green
+- [X] T039 [US2] Create pure progress-math library shared by chart, progress bar, and claim gating — in `frontend/src/lib/vesting.ts` (green T036)
+- [X] T040 [P] [US2] Create the schedules read hook: `getSchedulesByBeneficiary` → ids → `getSchedule` batched via viem multicall, TanStack Query keyed by chain/address with block refetch — in `frontend/src/hooks/useSchedules.ts`
+- [X] T041 [P] [US2] Build the schedule card and vesting progress bar using the press-tile primitives (token, total, released, releasable, progress) — in `frontend/src/components/ScheduleCard.tsx` and `frontend/src/components/VestingProgress.tsx`
+- [X] T042 [P] [US2] Build the Recharts vesting timeline marking start, cliff, each 90-day unlock, and end with vested step-line and claimed marks — in `frontend/src/components/VestingTimeline.tsx`
+- [X] T043 [US2] Build the dashboard page: list, detail view, loading placeholders, error-with-retry, and the empty state for wallets with no schedules — in `frontend/src/pages/Dashboard.tsx` (depends T040)
+- [X] T044 [US2] Build the claim button: enabled if and only if releasable > 0, claims exactly the currently releasable amount, TxState status, disabled with "nothing vested yet" before cliff — in `frontend/src/components/ClaimButton.tsx`
+- [X] T045 [P] [US2] Frontend tests: dashboard loading/empty/error rendering, claim gating rules, non-beneficiary sees no claim action — in `frontend/test/Dashboard.test.tsx` and `frontend/test/ClaimButton.test.tsx`
+- [X] T046 [US2] Gate check: all `forge test` (unit + fuzz + invariant) green; `./script/coverage-gate.sh` passes; US2 Vitest green
 
 **Checkpoint**: User Stories 1 AND 2 both work independently
 
