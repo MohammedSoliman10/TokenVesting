@@ -175,12 +175,12 @@ V14 (direct `/dashboard` refresh → no 404)
 ### Tests for User Story 4 (REQUIRED — TDD)
 
 - [X] T057 [P] [US4] Frontend tests FIRST: landing renders public content and connect CTA with no wallet connected — in `frontend/test/Landing.test.tsx`
-- [ ] T058 [P] [US4] Frontend tests FIRST: PressTile rest/hover/press styling matches theme tokens (2px ink outline, 12px radius, 4/6/0px offsets, coral press background) — in `frontend/test/PressTile.test.tsx`
+- [X] T058 [P] [US4] Frontend tests FIRST: PressTile rest/hover/press styling matches theme tokens (2px ink outline, 12px radius, 4/6/0px offsets, coral press background) — in `frontend/test/PressTile.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T059 [US4] Build the public landing page (faint dot-grid background, left-aligned hero with soft-coral highlight marks, corner crop marks, logo tile, uppercase wide-tracked labels) per `docs/design/theme.md` and `docs/design/theme.png` — in `frontend/src/pages/Landing.tsx` (green T057)
-- [ ] T060 [P] [US4] Theme fidelity audit: tokens, fonts, press states, no gradients/blur/dark mode; fix drift — across `frontend/src/` (green T058)
+- [X] T059 [US4] Build the public landing page (faint dot-grid background, left-aligned hero with soft-coral highlight marks, corner crop marks, logo tile, uppercase wide-tracked labels) per `docs/design/theme.md` and `docs/design/theme.png` — in `frontend/src/pages/Landing.tsx` (green T057)
+- [X] T060 [P] [US4] Theme fidelity audit: tokens, fonts, press states, no gradients/blur/dark mode; fix drift — across `frontend/src/` (green T058)
 - [ ] T061 [US4] Deploy the frontend to Vercel (root directory `/frontend`, env vars per `frontend/.env.example`) after a Sepolia deploy via `script/Deploy.s.sol`; verify quickstart V13 and V14 (deep-link refresh, no 404)
 - [ ] T062 [US4] Replace the README placeholder with the working deployed-site link — in `README.md`
 

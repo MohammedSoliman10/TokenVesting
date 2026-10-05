@@ -14,12 +14,13 @@
 
 /* ---- Design tokens (exact values from docs/design/theme.md) ---- */
 @theme {
-  /* Colors */
-  --color-canvas: #ffffff;
-  --color-paper: #faf7f2;
+  /* Colors — hex casing kept byte-identical to docs/design/theme.md and
+     lib/theme.ts (guarded by test/PressTile.test.tsx). */
+  --color-canvas: #FFFFFF;
+  --color-paper: #FAF7F2;
   --color-ink: #111111;
-  --color-coral: #fd9898;
-  --color-soft: #ffe2db;
+  --color-coral: #FD9898;
+  --color-soft: #FFE2DB;
 
   /* Typography */
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
@@ -100,5 +101,24 @@
       transparent 1.5px
     );
     background-size: 18px 18px;
+  }
+}
+
+/* T060 drift fix: press-tile STATE backgrounds must beat plain `bg-*`
+   utilities (utilities sit in a later layer and pinned the rest background
+   forever, so hover never turned soft). Inactive segmented-control segments
+   (Tab.tsx, aria-pressed=false) stay flat — higher specificity wins. */
+@layer utilities {
+  .press-tile:hover {
+    background-color: var(--color-soft);
+  }
+
+  .press-tile:active {
+    background-color: var(--color-coral);
+  }
+
+  .press-tile[aria-pressed='false']:hover,
+  .press-tile[aria-pressed='false']:active {
+    background-color: transparent;
   }
 }

@@ -51,7 +51,7 @@ function DeployedContracts() {
           return (
             <div key={name}>
               <dt className="inline font-display font-bold">{name}</dt>
-              <dd className="ml-2 inline break-all font-mono">
+              <dd className="ml-2 inline break-all">
                 {explorer ? (
                   <a href={`${explorer}${address}`} className="underline hover:no-underline">
                     {address}

@@ -28,7 +28,7 @@ import { FaucetButton } from '../components/FaucetButton';
 import { TxStatus } from '../components/states/TxStatus';
 
 const inputClass =
-  'w-full rounded-tile border border-ink/30 bg-canvas px-3 py-2 font-mono text-sm outline-none focus:border-ink';
+  'w-full rounded-tile border-2 border-ink/30 bg-canvas px-3 py-2 text-sm outline-none focus:border-ink';
 
 /** Explorers we can link transactions to (anvil has none → show the hash). */
 const EXPLORER_TX_URL: Record<string, string> = {
@@ -109,7 +109,7 @@ function Confirmation({
           {rows.map(([term, value]) => (
             <div key={term} className="flex justify-between gap-4 py-1">
               <dt className="shrink-0 text-ink/60">{term}</dt>
-              <dd className="break-all text-right font-mono">{value}</dd>
+              <dd className="break-all text-right">{value}</dd>
             </div>
           ))}
         </dl>
