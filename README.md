@@ -2,7 +2,7 @@
 
 A small spec-driven dApp for creating, viewing and claiming ERC-20 vesting
 schedules: grantors lock tokens behind a cliff and 90-day release intervals in a
-single audited-shape factory contract, beneficiaries watch their vesting progress
+single unaudited factory contract; beneficiaries watch their vesting progress
 on a responsive dashboard and claim exactly what has vested — with wallet and
 network guards, transaction-status recovery, and a generated-artifacts handshake
 that keeps the frontend and the contracts from ever drifting apart.
@@ -22,11 +22,13 @@ that keeps the frontend and the contracts from ever drifting apart.
   unfunded, and fee-on-transfer tokens are rejected by a balance-delta check.
 - **Cliff + 90-day intervals** — deterministic floor-division vesting, claimable
   by anyone but always paid to the beneficiary.
-- **Dashboard** — per-beneficiary and per-grantor views, vesting progress, live
-  claim buttons with pending/confirmed/failed status and pending-tx recovery.
+- **Dashboard (beneficiary view)** — schedules where the **connected wallet is
+  the beneficiary** (v1 has no grantor dashboard; grantors get a confirmation
+  view after creating a schedule), vesting progress, live claim buttons with
+  pending/confirmed/failed status and pending-tx recovery.
 - **Test-token faucet** — rate-limited (1,000 TEST / 24 h) for testnets.
-- **Wallet & network guards** — wrong-network banner, connect prompts, and an
-  honest "contracts not deployed on this chain yet" notice.
+- **Wallet & network guards** — wrong-network banner, connect prompts, and a
+  clear notice when the contracts are not deployed on the connected chain.
 - **Responsive & theme-verified** — Plinth design system
   ([`docs/design/theme.md`](docs/design/theme.md)), automated theme and
   responsive Playwright checks with committed screenshots.
@@ -137,7 +139,10 @@ FOUNDRY_PROFILE=ci forge test      # what CI runs: fuzz 512, invariants 128
 cd frontend
 npm run lint && npm run typecheck && npm test && npm run build
 
-# Browser checks (Playwright; start `npm run dev` first for theme-check)
+# Browser checks (Playwright) — each script spawns its OWN `vite preview`
+# (ports 4173/4174) and serves dist/, so: run `npm run build` first, and start
+# NO dev server.
+npm run build
 node scripts/responsive-check.mjs
 node scripts/theme-check.mjs
 
@@ -220,16 +225,18 @@ Copied from the security review (§7) — read the
 [full review](docs/SECURITY-REVIEW.md) for context:
 
 1. **No revocation** — a wrong beneficiary address locks the tokens until
-   `start + duration`, when only that address can claim. The create form
-   validates the address shape but has **no confirmation step and no checksum
-   warning** — double-check the address yourself.
+   `start + duration`, when only that address can claim. The create form has one
+   beneficiary input validated with viem's `isAddress` (mixed-case input with a
+   wrong EIP-55 checksum **is** rejected; all-lowercase input passes), but there
+   is **no confirmation step** — double-check the address yourself.
 2. **No admin / no pause** — immutable by design; nothing can be frozen later.
 3. **Shared pool** — all grantors' funds for the same token live in one contract;
    per-schedule accounting keeps releases independent.
 4. **Fee-on-transfer and rebasing tokens are rejected** at creation.
 5. **Test-token faucet has unlimited supply** — testnet only, never mainnet.
-6. **Extreme amounts** (≥ ~10⁵⁸ tokens) can panic mid-schedule — see the
-   overflow section of the review.
+6. **Extreme amounts** above the per-duration overflow bound (e.g. above
+   ≈ 2.97 × 10⁵⁷ tokens for a 120-month schedule; higher for shorter
+   durations) can panic mid-schedule — see the overflow section of the review.
 7. **30-day months, rigid shape** — cliffs/durations in whole multiples of 3
    months; no arbitrary schedules.
 8. **Permissionless release** — anyone may trigger a claim, but it always pays

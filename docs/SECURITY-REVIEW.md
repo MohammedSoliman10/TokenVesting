@@ -166,11 +166,19 @@ return (schedule.totalAmount * completedIntervals) / totalIntervals; // line 305
    `start + duration`, at which point the (wrong) address can claim them — nobody
    else can redirect them. **UI status:** the create form
    (`frontend/src/pages/CreateSchedule.tsx:291–299`) has **one** beneficiary input;
-   validation is viem's `isAddress`, explicitly **checksum-agnostic**
-   (`frontend/src/lib/schemas.ts:39`), with a non-zero check. There is **no
-   pre-submission address confirmation step and no EIP-55 checksum-mismatch
-   warning** — listed as a limitation; users must double-check the address
-   themselves (paste, don't type).
+   validation is viem's `isAddress(value)` with default options
+   (`frontend/src/lib/schemas.ts:51`), plus a non-zero check. Verified against
+   the installed viem **2.57.2** (`node -e` one-liner): it is **not**
+   checksum-agnostic — a **mixed-case address with a wrong EIP-55 checksum is
+   rejected** (`isAddress(bad) === false`; `isAddress(bad, { strict: false }) === true`,
+   so the strict default is what rejects it), an all-lowercase address is
+   **accepted** (`isAddress(lowercase) === true`), and an all-uppercase one is
+   rejected. So a mistyped checksum only protects users who paste mixed-case
+   addresses; a lowercase typo still passes. There is **no pre-submission
+   confirmation step**, and the rejection uses the generic “must be a 0x
+   address” message rather than a dedicated checksum warning — listed as a
+   limitation; users must double-check the address themselves (paste, don't
+   type).
 2. **No admin, no pause.** There is no owner, guardian, or circuit breaker on
    `VestingFactory` — by design (immutable, trustless), but it also means a buggy
    schedule or a hostile token cannot be frozen after the fact.
@@ -195,7 +203,9 @@ return (schedule.totalAmount * completedIntervals) / totalIntervals; // line 305
 
 ## 8. Secrets & push-readiness scan
 
-**Tracked files** (`git ls-files | wc -l`) → **138**.
+**Tracked files** (`git ls-files | wc -l`) → **142** at Phase 7a (138 when this
+scan ran in Phase 6c — the review's own commit then added `LICENSE`,
+`docs/SECURITY-REVIEW.md` and the two re-entrancy test files).
 
 - **Forbidden paths — none tracked.** `node_modules/`, `out/`, `cache/`,
   `broadcast/`, `dist/`, `lcov.info`, `test-results/`, `playwright-report/`: zero
@@ -210,10 +220,12 @@ return (schedule.totalAmount * completedIntervals) / totalIntervals; // line 305
   `docs/design/theme.png` 184,822 B · `docs/screenshots/landing-desktop.png` 77,434 B ·
   `landing-mobile.png` 52,310 B · `.specify/scripts/bash/common.sh` 38,439 B ·
   `create-mobile.png` 35,077 B · `spec.md` 26,045 B · `tasks.md` 25,214 B ·
-  `dashboard-mobile.png` 22,819 B · `.opencode/commands/speckit.checklist.md` 22,133 B.
+  `dashboard-mobile.png` 22,819 B · `docs/SECURITY-REVIEW.md` ≈22.5 kB (this
+  file, which entered the top-10 when it was committed).
   **Nothing is ≥ 1 MB** (largest is 426 KiB) — nothing to justify or remove.
 
-**Whole-history scan** — all **11 commits** (`git rev-list --all`), every tree
+**Whole-history scan** — all **11 commits** present at scan time
+(`git rev-list --all`), every tree
 (`git grep <pattern> <revs> -- .`), plus every filename ever added
 (`git log --all --diff-filter=A --name-only`):
 
