@@ -16,16 +16,23 @@ import { encodeAbiParameters, encodeEventTopics } from 'viem';
 
 const wagmi = vi.hoisted(() => ({
   writeContractAsync: vi.fn(),
-  account: { address: '0x328809Bc894f92807417D2dAD6b7C998c1aFdac6' as string | undefined },
+  account: {
+    address: '0x328809Bc894f92807417D2dAD6b7C998c1aFdac6' as string | undefined,
+    chainId: undefined as number | undefined,
+  },
+  switchChainAsync: vi.fn(),
   readContract: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
+  getTransactionReceipt: vi.fn(),
 }));
 
 vi.mock('wagmi', () => ({
-  useAccount: () => ({ address: wagmi.account.address }),
+  useAccount: () => ({ address: wagmi.account.address, chainId: wagmi.account.chainId }),
+  useSwitchChain: () => ({ switchChainAsync: wagmi.switchChainAsync, isPending: false }),
   usePublicClient: () => ({
     readContract: wagmi.readContract,
     waitForTransactionReceipt: wagmi.waitForTransactionReceipt,
+    getTransactionReceipt: wagmi.getTransactionReceipt,
   }),
   useWriteContract: () => ({ writeContractAsync: wagmi.writeContractAsync }),
 }));

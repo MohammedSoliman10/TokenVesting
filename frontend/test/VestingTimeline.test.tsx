@@ -10,7 +10,7 @@
  *    unlocks, end) — values from the vesting math, not the wall clock
  *  - the cumulative claimed amount is marked on the chart
  */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { VestingTimeline } from '../src/components/VestingTimeline';
@@ -87,5 +87,55 @@ describe('VestingTimeline', () => {
     render(<VestingTimeline schedule={scheduleWith({})} />);
 
     expect(screen.getByRole('img', { name: 'Vesting timeline' })).toBeInTheDocument();
+  });
+
+  describe('responsive layout at 375px (T056)', () => {
+    it('fills its container and never forces a fixed 640px width', () => {
+      const { container } = render(<VestingTimeline schedule={scheduleWith({})} />);
+
+      const wrapper = container.querySelector('[role="img"]')!;
+      expect(wrapper.className).toContain('w-full'); // fills the card at any viewport
+      // jsdom has no layout: a fixed width would be the only width — the
+      // measured-width behaviour itself is asserted with a ResizeObserver below
+    });
+
+    it('renders at the measured container width when a ResizeObserver is available', () => {
+      const observed: Element[] = [];
+      class FakeResizeObserver {
+        private readonly callback: ResizeObserverCallback;
+        constructor(callback: ResizeObserverCallback) {
+          this.callback = callback;
+        }
+        observe(target: Element) {
+          observed.push(target);
+          // simulate a 375px phone: card content width ≈ 343px
+          this.callback(
+            [{ contentRect: { width: 343 } } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+        }
+        unobserve() {}
+        disconnect() {}
+      }
+      vi.stubGlobal('ResizeObserver', FakeResizeObserver);
+
+      try {
+        const { container } = render(<VestingTimeline schedule={scheduleWith({})} />);
+
+        expect(observed.length).toBeGreaterThan(0); // the container is observed
+        const chart = container.querySelector('.recharts-wrapper');
+        expect(chart).toHaveAttribute('width', '343'); // NOT the fixed 640
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it('falls back to a fixed width when ResizeObserver is unavailable (jsdom)', () => {
+      expect(typeof ResizeObserver).toBe('undefined'); // jsdom environment
+      const { container } = render(<VestingTimeline schedule={scheduleWith({})} />);
+
+      const chart = container.querySelector('.recharts-wrapper');
+      expect(chart).toHaveAttribute('width', '640');
+    });
   });
 });

@@ -141,6 +141,12 @@ export default function CreateSchedule() {
 
   const [walletBalance, setWalletBalance] = useState(0n);
   const [symbol, setSymbol] = useState('');
+  // Balance lifecycle: unknown while there is no wallet, while the read is
+  // in flight and when it fails — rule V6 is skipped instead of showing a
+  // misleading "exceeds your wallet balance" (T052/T053).
+  const [balanceKnown, setBalanceKnown] = useState(false);
+  const [balanceError, setBalanceError] = useState(false);
+  const [balanceRetry, setBalanceRetry] = useState(0);
 
   const {
     register,
@@ -163,7 +169,9 @@ export default function CreateSchedule() {
     resolver: zodResolver(
       createScheduleSchema({
         nowSeconds: Math.floor(Date.now() / 1000),
-        walletBalance,
+        // `undefined` = balance unknown (no wallet / read in flight / failed)
+        // → V6 is skipped rather than reporting a bogus balance error.
+        walletBalance: balanceKnown ? walletBalance : undefined,
         decimals: TEST_TOKEN_DECIMALS,
       } satisfies CreateScheduleContext),
     ),
@@ -177,6 +185,8 @@ export default function CreateSchedule() {
     if (!publicClient || !address || !isAddress(watchedToken)) {
       setWalletBalance(0n);
       setSymbol('');
+      setBalanceKnown(false);
+      setBalanceError(false);
       return;
     }
     let cancelled = false;
@@ -198,16 +208,22 @@ export default function CreateSchedule() {
         if (cancelled) return;
         setWalletBalance(balance as bigint);
         setSymbol(tokenSymbol as string);
+        setBalanceKnown(true);
+        setBalanceError(false);
       })
       .catch(() => {
         if (cancelled) return;
         setWalletBalance(0n);
         setSymbol('');
+        // The read failed — the balance is UNKNOWN, not zero (T052):
+        // the page shows an error with Retry instead of a blank or a lie.
+        setBalanceKnown(false);
+        setBalanceError(true);
       });
     return () => {
       cancelled = true;
     };
-  }, [publicClient, address, watchedToken]);
+  }, [publicClient, address, watchedToken, balanceRetry]);
 
   const onSubmit = (values: CreateScheduleValues) => {
     // The resolver already proved V1–V6 — nothing below can make the wallet
@@ -239,10 +255,23 @@ export default function CreateSchedule() {
       <h1 className="mt-3 text-3xl">Create a vesting schedule</h1>
 
       <Card label="Test token" className="mt-6">
-        <p className="text-sm">
-          Balance: {formatUnits(walletBalance, TEST_TOKEN_DECIMALS)}
-          {symbol ? ` ${symbol}` : ''}
-        </p>
+        {balanceError ? (
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <p role="alert">Could not read your balance.</p>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setBalanceRetry((attempt) => attempt + 1)}
+            >
+              Retry balance
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm">
+            Balance: {formatUnits(walletBalance, TEST_TOKEN_DECIMALS)}
+            {symbol ? ` ${symbol}` : ''}
+          </p>
+        )}
         <div className="mt-3">
           <FaucetButton />
         </div>
@@ -357,8 +386,14 @@ export default function CreateSchedule() {
           </Field>
         </Card>
 
+        {address ? null : (
+          <p className="press-tile mt-6 bg-paper p-4 text-center text-sm font-medium">
+            Connect a wallet to create a schedule
+          </p>
+        )}
+
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button type="submit" busy={isCreating}>
+          <Button type="submit" busy={isCreating} disabled={!address}>
             Create schedule
           </Button>
           <TxStatus state={state as TxState} />

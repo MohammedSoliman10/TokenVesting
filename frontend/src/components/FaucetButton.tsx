@@ -10,14 +10,17 @@
 import { useEffect } from 'react';
 import { useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { abiFor, activeChainId, contractAddress } from '../contracts';
+import { useEnsureChain } from '../hooks/useEnsureChain';
 import { useTxStatus } from '../hooks/useTxStatus';
 import { Button } from './primitives/Button';
 import { TxStatus } from './states/TxStatus';
+import { WrongNetworkPrompt } from './states/WrongNetworkPrompt';
 
 export function FaucetButton() {
   const { state, onSubmitted, onConfirmed, onFailed, acknowledge, isPending } = useTxStatus(
     'faucet',
   );
+  const { ensureChain } = useEnsureChain();
   const {
     writeContract,
     data: hash,
@@ -45,8 +48,11 @@ export function FaucetButton() {
   const busy = signing || isPending;
   const terminal = state.status === 'confirmed' || state.status === 'failed';
 
-  const claim = () => {
+  const claim = async () => {
     if (!tokenAddress) return;
+    // T048/T050: blocked on the wrong chain; proceeds only after a
+    // successful switchChain. The prompt below explains the block.
+    if (!(await ensureChain())) return;
     writeContract({
       address: tokenAddress as `0x${string}`,
       abi: abiFor('TestToken'),
@@ -56,7 +62,8 @@ export function FaucetButton() {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button type="button" onClick={claim} busy={busy} disabled={!tokenAddress}>
+      <WrongNetworkPrompt className="w-full" />
+      <Button type="button" onClick={() => void claim()} busy={busy} disabled={!tokenAddress}>
         Get test tokens
       </Button>
       <TxStatus state={state} />

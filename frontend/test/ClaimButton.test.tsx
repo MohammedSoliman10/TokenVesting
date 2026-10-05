@@ -16,10 +16,15 @@
  *    revert data, FR-017)
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const wagmi = vi.hoisted(() => ({
-  account: { address: undefined as string | undefined },
+  account: {
+    address: undefined as string | undefined,
+    chainId: undefined as number | undefined,
+  },
+  switchChainAsync: vi.fn(),
+  publicClient: { getTransactionReceipt: vi.fn(), chain: { id: 31337 } },
   read: {
     data: undefined as bigint | undefined,
     refetch: vi.fn().mockResolvedValue(undefined),
@@ -40,7 +45,9 @@ const wagmi = vi.hoisted(() => ({
 }));
 
 vi.mock('wagmi', () => ({
-  useAccount: () => ({ address: wagmi.account.address }),
+  useAccount: () => ({ address: wagmi.account.address, chainId: wagmi.account.chainId }),
+  useSwitchChain: () => ({ switchChainAsync: wagmi.switchChainAsync, isPending: false }),
+  usePublicClient: () => wagmi.publicClient,
   useReadContract: (options: unknown) => {
     wagmi.read.options.push(options);
     return { data: wagmi.read.data, refetch: wagmi.read.refetch, error: undefined };
@@ -162,19 +169,22 @@ describe('ClaimButton', () => {
     expect(screen.getByRole('button', { name: 'Claim' })).toBeDisabled();
   });
 
-  it('submits release(id) to the factory with the generated ABI', () => {
+  it('submits release(id) to the factory with the generated ABI', async () => {
     wagmi.read.data = 450n * E18;
     const view = renderButton(AFTER_CLIFF);
 
     fireEvent.click(screen.getByRole('button', { name: 'Claim' }));
 
-    expect(wagmi.writeContract).toHaveBeenCalledWith({
-      address: contractAddress(activeChainId, 'VestingFactory'),
-      abi: abiFor('VestingFactory'),
-      functionName: 'release',
-      args: [SCHEDULE.id],
-      chainId: activeChainId,
-    });
+    // the click passes the wrong-network guard (T048) before it writes
+    await waitFor(() =>
+      expect(wagmi.writeContract).toHaveBeenCalledWith({
+        address: contractAddress(activeChainId, 'VestingFactory'),
+        abi: abiFor('VestingFactory'),
+        functionName: 'release',
+        args: [SCHEDULE.id],
+        chainId: activeChainId,
+      }),
+    );
     view.unmount();
   });
 

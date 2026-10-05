@@ -4,9 +4,12 @@
  * mocked: no live chain, no wallet — assertions only.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const wagmi = vi.hoisted(() => ({
+  account: { chainId: undefined as number | undefined },
+  switchChainAsync: vi.fn(),
+  publicClient: { getTransactionReceipt: vi.fn(), chain: { id: 31337 } },
   writeContract: vi.fn(),
   write: {
     data: undefined as string | undefined,
@@ -22,6 +25,9 @@ const wagmi = vi.hoisted(() => ({
 }));
 
 vi.mock('wagmi', () => ({
+  useAccount: () => ({ address: undefined, chainId: wagmi.account.chainId }),
+  useSwitchChain: () => ({ switchChainAsync: wagmi.switchChainAsync, isPending: false }),
+  usePublicClient: () => wagmi.publicClient,
   useWriteContract: () => ({
     writeContract: wagmi.writeContract,
     data: wagmi.write.data,
@@ -63,12 +69,13 @@ describe('FaucetButton', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
-  it('click: calls faucet() on the deployed TestToken with the generated ABI (nothing hardcoded)', () => {
+  it('click: calls faucet() on the deployed TestToken with the generated ABI (nothing hardcoded)', async () => {
     render(<FaucetButton />);
 
     fireEvent.click(screen.getByRole('button', { name: /get test tokens/i }));
 
-    expect(wagmi.writeContract).toHaveBeenCalledTimes(1);
+    // the click passes the wrong-network guard (T048) before it writes
+    await waitFor(() => expect(wagmi.writeContract).toHaveBeenCalledTimes(1));
     const call = wagmi.writeContract.mock.calls[0][0] as {
       address: string;
       abi: unknown;

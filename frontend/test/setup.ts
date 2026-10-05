@@ -5,4 +5,6 @@ import { afterEach } from 'vitest';
 
 afterEach(() => {
   cleanup();
+  // T054: useTxStatus persists a pending tx — never leak it across tests.
+  localStorage.clear();
 });

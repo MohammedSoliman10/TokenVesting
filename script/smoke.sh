@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 #
+# SECURITY: the private key(s) in this script are anvil's PUBLIC, well-known
+# local development keys (anvil's default mnemonic). They are safe for local
+# testing ONLY and must NEVER be used on a real network — anyone can spend
+# funds held by them.
+#
 # US2 live smoke test — runs the beneficiary claim flow end-to-end against a
 # local anvil node with `cast` (no browser), covering spec acceptance
 # scenarios 1, 3 and 5:

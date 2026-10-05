@@ -15,6 +15,7 @@ import { useCallback, useState } from 'react';
 import { decodeEventLog } from 'viem';
 import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
 import { abiFor, activeChainId, contractAddress } from '../contracts';
+import { useEnsureChain } from './useEnsureChain';
 import { useTxStatus, type TxState } from './useTxStatus';
 
 export interface CreateScheduleParams {
@@ -56,6 +57,7 @@ export function useCreateSchedule(): UseCreateScheduleResult {
   const { address } = useAccount();
   const publicClient = usePublicClient();
   const { writeContractAsync } = useWriteContract();
+  const { ensureChain } = useEnsureChain();
   const {
     state,
     onSubmitted,
@@ -72,6 +74,9 @@ export function useCreateSchedule(): UseCreateScheduleResult {
       try {
         if (!address) throw preflightError('Connect a wallet to create a schedule.');
         if (!publicClient) throw preflightError('No network connection — check your wallet.');
+        // T048/T050: approve + create are blocked on the wrong chain and only
+        // proceed after switchChain succeeds (the page shows the prompt).
+        if (!(await ensureChain())) return;
         const tokenAddress = contractAddress(activeChainId, 'TestToken');
         const factoryAddress = contractAddress(activeChainId, 'VestingFactory');
         if (!tokenAddress || !factoryAddress) {
@@ -142,7 +147,7 @@ export function useCreateSchedule(): UseCreateScheduleResult {
         onFailed(error);
       }
     },
-    [address, publicClient, writeContractAsync, onSubmitted, onConfirmed, onFailed],
+    [address, publicClient, writeContractAsync, ensureChain, onSubmitted, onConfirmed, onFailed],
   );
 
   const reset = useCallback(() => {

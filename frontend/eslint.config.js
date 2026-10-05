@@ -43,4 +43,15 @@ export default tseslint.config(
       },
     },
   },
+  {
+    // Node script (spawns vite preview) whose `page.evaluate()` callbacks
+    // run in the browser page — hence BOTH global sets.
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+      },
+    },
+  },
 );

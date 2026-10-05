@@ -146,19 +146,19 @@ mid-load → error with retry, never blank)
 
 ### Tests for User Story 3 (REQUIRED — TDD)
 
-- [ ] T047 [P] [US3] Frontend tests FIRST: `useTxStatus` state machine — submitted → pending → confirmed; user rejection → failed with friendly message and preserved form data; terminal state visible until acknowledged — in `frontend/test/useTxStatus.test.ts`
-- [ ] T048 [P] [US3] Frontend tests FIRST: wrong-network guard — write attempts blocked until chain switch succeeds — in `frontend/test/WrongNetwork.test.tsx`
-- [ ] T049 [P] [US3] Frontend tests FIRST: Loading/Empty/Error components — skeletons while loading, retry control invokes reload on error — in `frontend/test/states.test.tsx`
+- [X] T047 [P] [US3] Frontend tests FIRST: `useTxStatus` state machine — submitted → pending → confirmed; user rejection → failed with friendly message and preserved form data; terminal state visible until acknowledged — in `frontend/test/useTxStatus.test.ts`
+- [X] T048 [P] [US3] Frontend tests FIRST: wrong-network guard — write attempts blocked until chain switch succeeds — in `frontend/test/WrongNetwork.test.tsx`
+- [X] T049 [P] [US3] Frontend tests FIRST: Loading/Empty/Error components — skeletons while loading, retry control invokes reload on error — in `frontend/test/states.test.tsx`
 
 ### Implementation for User Story 3
 
-- [ ] T050 [US3] Implement wrong-network detection and switch gating on every write path (create, approve, claim, faucet) — in `frontend/src/hooks/useEnsureChain.ts` wired into `frontend/src/hooks/*.ts` (green T048)
-- [ ] T051 [P] [US3] Complete the custom-error → user-message mapping for all contract errors (`FaucetCooldown()`, `NothingToRelease()`, `InvalidStart()`, `InvalidDuration()`, `InvalidCliff()`, `ZeroAddress()`, `ZeroAmount()`, `InsufficientBalance()`, `InsufficientAllowance()`, `FeeOnTransferRejected()`, `ScheduleNotFound()`) — in `frontend/src/lib/errors.ts`
-- [ ] T052 [P] [US3] Audit and wire Loading/Empty/Error states on every screen so no screen can render blank or misleading content — in `frontend/src/pages/*.tsx`
-- [ ] T053 [US3] Implement disconnect: app returns to public state (no address, no wallet-specific content) and reconnect restores the wallet's schedules — in `frontend/src/App.tsx`
-- [ ] T054 [US3] Implement pending-transaction recovery across refresh (persist tx hash, re-derive status on load) — in `frontend/src/hooks/useTxStatus.ts`
-- [ ] T055 [P] [US3] Add wallet-not-installed/not-connected guidance instead of silent failure — in `frontend/src/lib/wagmi.ts` (RainbowKit wallet guide config)
-- [ ] T056 [US3] Responsive pass: all flows usable at 375px and desktop with no horizontal scrolling or overlap — across `frontend/src/`
+- [X] T050 [US3] Implement wrong-network detection and switch gating on every write path (create, approve, claim, faucet) — in `frontend/src/hooks/useEnsureChain.ts` wired into `frontend/src/hooks/*.ts` (green T048)
+- [X] T051 [P] [US3] Complete the custom-error → user-message mapping for all contract errors (`FaucetCooldown()`, `NothingToRelease()`, `InvalidStart()`, `InvalidDuration()`, `InvalidCliff()`, `ZeroAddress()`, `ZeroAmount()`, `InsufficientBalance()`, `InsufficientAllowance()`, `FeeOnTransferRejected()`, `ScheduleNotFound()`) — in `frontend/src/lib/errors.ts`
+- [X] T052 [P] [US3] Audit and wire Loading/Empty/Error states on every screen so no screen can render blank or misleading content — in `frontend/src/pages/*.tsx`
+- [X] T053 [US3] Implement disconnect: app returns to public state (no address, no wallet-specific content) and reconnect restores the wallet's schedules — in `frontend/src/App.tsx`
+- [X] T054 [US3] Implement pending-transaction recovery across refresh (persist tx hash, re-derive status on load) — in `frontend/src/hooks/useTxStatus.ts`
+- [X] T055 [P] [US3] Add wallet-not-installed/not-connected guidance instead of silent failure — in `frontend/src/lib/wagmi.ts` (RainbowKit wallet guide config)
+- [X] T056 [US3] Responsive pass: all flows usable at 375px and desktop with no horizontal scrolling or overlap — across `frontend/src/`
 
 **Checkpoint**: All user stories independently functional with full feedback UX
 

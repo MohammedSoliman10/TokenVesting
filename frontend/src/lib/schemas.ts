@@ -26,8 +26,12 @@ export const TEST_TOKEN_DECIMALS = 18;
 export interface CreateScheduleContext {
   /** Current unix time in seconds (rule V3: start === 0 || start >= now). */
   nowSeconds: number;
-  /** Grantor balance of the schedule token in base units (rule V6). */
-  walletBalance: bigint;
+  /**
+   * Grantor balance of the schedule token in base units (rule V6), or
+   * `undefined` when it is unknown (no wallet / read in flight / read
+   * failed) — then V6 is skipped instead of reporting a bogus balance error.
+   */
+  walletBalance: bigint | undefined;
   /** Decimals of the schedule token (amount parsing, rule V6). */
   decimals: number;
 }
@@ -128,7 +132,7 @@ export function createScheduleSchema(ctx: CreateScheduleContext) {
       const wei = parseUnits(raw.trim(), ctx.decimals);
       if (wei <= 0n) {
         fail('amount', AMOUNT_POSITIVE_MESSAGE);
-      } else if (wei > ctx.walletBalance) {
+      } else if (ctx.walletBalance !== undefined && wei > ctx.walletBalance) {
         fail('amount', AMOUNT_BALANCE_MESSAGE);
       }
     });

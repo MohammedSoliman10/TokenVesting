@@ -11,6 +11,13 @@ build/
 coverage/
 *.log
 
+# --- Playwright (T056 responsive check) ---
+# Browser binaries normally live OUTSIDE the repo (~/.cache/ms-playwright);
+# these patterns keep them out if PLAYWRIGHT_BROWSERS_PATH points inside it.
+ms-playwright/
+frontend/test-results/
+frontend/playwright-report/
+
 # --- Environment (only .env.example may be committed) ---
 .env
 .env.*

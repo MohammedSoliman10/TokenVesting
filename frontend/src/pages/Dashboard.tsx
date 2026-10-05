@@ -13,7 +13,7 @@
  * block timestamp — the page never reads the browser clock.
  */
 import { Link } from 'react-router-dom';
-import { useAccount } from 'wagmi';
+import { useAccount, useConnect } from 'wagmi';
 import { ClaimButton } from '../components/ClaimButton';
 import { ScheduleCard } from '../components/ScheduleCard';
 import { VestingTimeline } from '../components/VestingTimeline';
@@ -25,17 +25,24 @@ import { friendlyErrorMessage } from '../lib/errors';
 
 export default function Dashboard() {
   const { address } = useAccount();
+  const { connectors = [] } = useConnect();
   const { data, isLoading, error, refetch } = useSchedules();
 
   if (!address) {
+    // T055: guide the user — no wallet at all vs. not connected yet.
+    const walletMissing = connectors.length === 0;
     return (
       <section>
         <p className="label">Dashboard</p>
         <h1 className="mt-3 text-3xl">Your vesting schedules</h1>
         <Empty
           className="mt-6"
-          title="Connect your wallet"
-          description="Your vesting schedules appear here once a wallet is connected."
+          title={walletMissing ? 'No wallet detected' : 'Connect your wallet'}
+          description={
+            walletMissing
+              ? 'No wallet detected — install a browser wallet to continue.'
+              : 'Your vesting schedules appear here once a wallet is connected.'
+          }
         />
       </section>
     );

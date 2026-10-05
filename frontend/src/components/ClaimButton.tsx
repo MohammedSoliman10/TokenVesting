@@ -22,10 +22,12 @@
 import { useEffect } from 'react';
 import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from 'wagmi';
 import { abiFor, activeChainId, contractAddress } from '../contracts';
+import { useEnsureChain } from '../hooks/useEnsureChain';
 import type { ScheduleRecord } from '../hooks/useSchedules';
 import { useTxStatus } from '../hooks/useTxStatus';
 import { Button } from './primitives/Button';
 import { TxStatus } from './states/TxStatus';
+import { WrongNetworkPrompt } from './states/WrongNetworkPrompt';
 
 export interface ClaimButtonProps {
   schedule: ScheduleRecord;
@@ -37,6 +39,7 @@ export interface ClaimButtonProps {
 
 export function ClaimButton({ schedule, now, refetchSchedules }: ClaimButtonProps) {
   const { address } = useAccount();
+  const { ensureChain } = useEnsureChain();
   const factoryAddress = contractAddress(activeChainId, 'VestingFactory');
   const beforeCliff = now < schedule.start + schedule.cliffDuration;
 
@@ -92,8 +95,11 @@ export function ClaimButton({ schedule, now, refetchSchedules }: ClaimButtonProp
   const busy = signing || isPending;
   const canClaim = !beforeCliff && amount > 0n && !busy;
 
-  const claim = () => {
+  const claim = async () => {
     if (!factoryAddress) return;
+    // T048/T050: blocked on the wrong chain; proceeds only after a
+    // successful switchChain. The prompt above explains the block.
+    if (!(await ensureChain())) return;
     writeContract({
       address: factoryAddress as `0x${string}`,
       abi: abiFor('VestingFactory'),
@@ -107,7 +113,8 @@ export function ClaimButton({ schedule, now, refetchSchedules }: ClaimButtonProp
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button type="button" onClick={claim} busy={busy} disabled={!canClaim}>
+      <WrongNetworkPrompt className="w-full" />
+      <Button type="button" onClick={() => void claim()} busy={busy} disabled={!canClaim}>
         {beforeCliff ? 'Nothing vested yet' : 'Claim'}
       </Button>
       <TxStatus state={state} />

@@ -22,14 +22,18 @@ const mocks = vi.hoisted(() => ({
   account: { address: '0x328809Bc894f92807417D2dAD6b7C998c1aFdac6' as string | undefined },
   readContract: vi.fn(),
   waitForTransactionReceipt: vi.fn(),
+  getTransactionReceipt: vi.fn(),
+  switchChainAsync: vi.fn(),
   allowance: 0n as bigint,
 }));
 
 vi.mock('wagmi', () => ({
   useAccount: () => ({ address: mocks.account.address }),
+  useSwitchChain: () => ({ switchChainAsync: mocks.switchChainAsync, isPending: false }),
   usePublicClient: () => ({
     readContract: mocks.readContract,
     waitForTransactionReceipt: mocks.waitForTransactionReceipt,
+    getTransactionReceipt: mocks.getTransactionReceipt,
   }),
   useWriteContract: () => ({
     writeContract: mocks.writeContract,
@@ -45,6 +49,7 @@ vi.mock('wagmi', () => ({
 import CreateSchedule from '../src/pages/CreateSchedule';
 import { abiFor, activeChainId, contractAddress } from '../src/contracts';
 import {
+  AMOUNT_BALANCE_MESSAGE,
   AMOUNT_POSITIVE_MESSAGE,
   DURATION_MESSAGE,
   MONTH_CONVENTION_COPY,
@@ -269,6 +274,65 @@ describe('CreateSchedule confirmation view (T030)', () => {
     // "Create another" returns to a fresh form.
     fireEvent.click(screen.getByRole('button', { name: 'Create another' }));
     expect(screen.getByLabelText('Beneficiary address')).toHaveValue('');
+  });
+});
+
+describe('CreateSchedule without a wallet (T053)', () => {
+  it('shows connect guidance, disables submit and never shows a misleading balance error', async () => {
+    mocks.account.address = undefined;
+    const { container } = render(<CreateSchedule />);
+
+    // guidance, not a blank or an error
+    expect(screen.getByText('Connect a wallet to create a schedule')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    // fill the form (no symbol → the amount label carries no ticker)
+    fireEvent.change(screen.getByLabelText('Beneficiary address'), {
+      target: { value: BENEFICIARY },
+    });
+    fireEvent.change(screen.getByLabelText('Cliff (months)'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('Duration (months)'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '100' } });
+    // programmatic submit bypasses the disabled button — validation must run
+    fireEvent.submit(container.querySelector('form')!);
+
+    // with no wallet the balance is UNKNOWN — "exceeds your wallet balance"
+    // would be a lie (V6 must be skipped until a wallet is connected)
+    expect(screen.queryByText(AMOUNT_BALANCE_MESSAGE)).not.toBeInTheDocument();
+
+    // and no write can be attempted
+    expect(screen.getByRole('button', { name: 'Create schedule' })).toBeDisabled();
+    expect(mocks.writeContractAsync).not.toHaveBeenCalled();
+  });
+});
+
+describe('CreateSchedule balance read failure (T052 audit)', () => {
+  it('shows an inline error with a working Retry when the balance read fails', async () => {
+    mocks.readContract.mockImplementation(
+      async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'balanceOf') throw new Error('RPC unreachable');
+        if (functionName === 'symbol') return 'TEST';
+        return 0n;
+      },
+    );
+    render(<CreateSchedule />);
+
+    expect(await screen.findByText('Could not read your balance.')).toBeInTheDocument();
+    expect(screen.queryByText(/^Balance:/)).not.toBeInTheDocument();
+
+    // the RPC recovers → Retry re-runs the read
+    mocks.readContract.mockImplementation(
+      async ({ functionName }: { functionName: string }) => {
+        if (functionName === 'balanceOf') return FULL_BALANCE;
+        if (functionName === 'symbol') return 'TEST';
+        if (functionName === 'allowance') return mocks.allowance;
+        return 0n;
+      },
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Retry balance' }));
+
+    expect(await screen.findByText('Balance: 1000 TEST')).toBeInTheDocument();
+    expect(screen.queryByText('Could not read your balance.')).not.toBeInTheDocument();
   });
 });
 

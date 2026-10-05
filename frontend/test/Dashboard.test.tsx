@@ -23,6 +23,9 @@ const wagmi = vi.hoisted(() => ({
   useReadContract: vi.fn(),
   useWriteContract: vi.fn(),
   useWaitForTransactionReceipt: vi.fn(),
+  useSwitchChain: vi.fn(),
+  useConnect: vi.fn(),
+  usePublicClient: vi.fn(),
 }));
 vi.mock('wagmi', () => wagmi);
 
@@ -91,7 +94,13 @@ describe('Dashboard', () => {
     wagmi.useReadContract.mockReset();
     wagmi.useWriteContract.mockReset();
     wagmi.useWaitForTransactionReceipt.mockReset();
+    wagmi.useSwitchChain.mockReset();
+    wagmi.useConnect.mockReset();
+    wagmi.usePublicClient.mockReset();
     // ClaimButton (rendered inside cards) defaults — tests override as needed
+    wagmi.useSwitchChain.mockReturnValue({ switchChainAsync: vi.fn(), isPending: false });
+    wagmi.useConnect.mockReturnValue({ connectors: [{}] });
+    wagmi.usePublicClient.mockReturnValue({ getTransactionReceipt: vi.fn() });
     wagmi.useReadContract.mockReturnValue({
       data: undefined,
       refetch: vi.fn(),
@@ -119,6 +128,20 @@ describe('Dashboard', () => {
     expect(screen.getByText('Connect your wallet')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('T055: guidance when NO wallet is installed — no silent failure', () => {
+    // no address AND no connectors (no browser wallet available)
+    given({ address: undefined });
+    wagmi.useConnect.mockReturnValue({ connectors: [] });
+
+    renderDashboard();
+
+    expect(
+      screen.getByText('No wallet detected — install a browser wallet to continue.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Connect your wallet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('shows a labelled skeleton while schedules are in flight', () => {

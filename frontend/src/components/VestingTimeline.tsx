@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { formatUnits } from 'viem';
 import { Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts';
 import type { ScheduleRecord } from '../hooks/useSchedules';
@@ -7,6 +8,9 @@ import { unlockTimestamps, vestedAmount } from '../lib/vesting';
 export interface VestingTimelineProps {
   schedule: ScheduleRecord;
 }
+
+/** Fixed width used until the container is measured (jsdom / no observer). */
+const FALLBACK_WIDTH = 640;
 
 interface Marker {
   at: bigint;
@@ -40,6 +44,26 @@ export function VestingTimeline({ schedule }: VestingTimelineProps) {
   const cliffAt = start + cliffDuration;
   const toTokens = (base: bigint): number => Number(formatUnits(base, tokenDecimals));
 
+  // --- responsive width (T056): measure the container, no h-scroll ---------
+  // The chart fills its card at any viewport (375px and up). jsdom and
+  // browsers without ResizeObserver keep the fixed fallback.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(FALLBACK_WIDTH);
+
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    const measured = element.clientWidth;
+    if (measured > 0) setWidth(Math.round(measured));
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver((entries) => {
+      const next = entries[0]?.contentRect.width ?? 0;
+      if (next > 0) setWidth(Math.round(next));
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
   // --- milestone markers (deduped by timestamp, labels merged) -------------
   const markers: Marker[] = [];
   const addMarker = (at: bigint, label: string): void => {
@@ -72,9 +96,14 @@ export function VestingTimeline({ schedule }: VestingTimelineProps) {
   }));
 
   return (
-    <div role="img" aria-label="Vesting timeline" className="w-full overflow-x-auto">
+    <div
+      ref={containerRef}
+      role="img"
+      aria-label="Vesting timeline"
+      className="w-full overflow-x-auto"
+    >
       <LineChart
-        width={640}
+        width={width}
         height={280}
         data={points}
         margin={{ top: 24, right: 24, bottom: 8, left: 8 }}
