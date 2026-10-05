@@ -108,6 +108,9 @@ contract VestingFactory is ReentrancyGuard {
     /// @dev All parameter checks run before any state write (FR-003, research R3).
     ///      `start == 0` resolves to `block.timestamp`. Fee-on-transfer tokens are
     ///      rejected by comparing the factory's balance before/after the pull (FR-006).
+    ///      `nonReentrant` closes the callback window inside `safeTransferFrom`: a
+    ///      malicious token cannot re-enter `createSchedule` or `release` while a
+    ///      funding pull is in flight (T064 security review).
     /// @param token ERC-20 to vest; must be non-zero (`ZeroAddress()`).
     /// @param beneficiary Receiver of vested tokens; must be non-zero (`ZeroAddress()`); may equal
     /// the grantor. @param start Unix seconds: `0` = now, or a non-zero value `>= block.timestamp`
@@ -124,7 +127,7 @@ contract VestingFactory is ReentrancyGuard {
         uint256 cliffMonths,
         uint256 durationMonths,
         uint256 amount
-    ) external returns (uint256 id) {
+    ) external nonReentrant returns (uint256 id) {
         // --- FR-003 validation matrix: all checks precede any state write ---
         if (token == address(0) || beneficiary == address(0)) {
             revert ZeroAddress();

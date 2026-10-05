@@ -192,11 +192,11 @@ V14 (direct `/dashboard` refresh → no 404)
 
 **Purpose**: Constitution Definition-of-Done gates affecting everything
 
-- [ ] T063 [P] Run `./script/coverage-gate.sh` and close any gaps until core `src/` line coverage ≥ 95% — across `test/`
-- [ ] T064 [P] Security hardening review against the spec: CEI ordering, reentrancy, allowance handling, fee-on-transfer delta, no division by zero, `beneficiary` spelling everywhere, custom errors only — across `src/`, `frontend/src/`
-- [ ] T065 [P] Verify all merge gates green locally: `forge fmt --check`, `forge build --deny warnings`, `forge test`, `./script/coverage-gate.sh`, frontend `lint`, `typecheck`, `vitest run`, `build` — repo-wide
+- [X] T063 [P] Run `./script/coverage-gate.sh` and close any gaps until core `src/` line coverage ≥ 95% — across `test/`
+- [X] T064 [P] Security hardening review against the spec: CEI ordering, reentrancy, allowance handling, fee-on-transfer delta, no division by zero, `beneficiary` spelling everywhere, custom errors only — across `src/`, `frontend/src/`
+- [X] T065 [P] Verify all merge gates green locally: `forge fmt --check`, `forge build --deny warnings`, `forge test`, `./script/coverage-gate.sh`, frontend `lint`, `typecheck`, `vitest run`, `build` — repo-wide
 - [ ] T066 Execute `specs/001-token-vesting-app/quickstart.md` scenarios V1–V14 end-to-end (anvil + Sepolia) and fix any failures — via `specs/001-token-vesting-app/quickstart.md`
-- [ ] T067 [P] Finalize documentation: README (setup, quickstart, deployed link), note deploy/keystore workflow (`cast wallet import` + `--account`, never raw keys) — in `README.md`
+- [X] T067 [P] Finalize documentation: README (setup, quickstart, deployed link), note deploy/keystore workflow (`cast wallet import` + `--account`, never raw keys) — in `README.md`
 - [ ] T068 Sweep conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `ci:`) and open the PR into `main` with the constitution checklist — repo-wide
 
 ---
