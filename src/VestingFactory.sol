@@ -161,6 +161,10 @@ contract VestingFactory is ReentrancyGuard {
         // --- FR-002/FR-006: atomic pull + fee-on-transfer rejection by delta ---
         uint256 balanceBefore = erc20.balanceOf(address(this));
         erc20.safeTransferFrom(msg.sender, address(this), amount);
+        // FR-006 demands EXACTNESS: fee-on-transfer, rebasing and deflationary
+        // tokens must fail creation, so a strict `!=` against the required
+        // amount is the check itself — not an accident.
+        // forge-lint: disable-next-line(incorrect-strict-equality)
         if (erc20.balanceOf(address(this)) - balanceBefore != amount) {
             revert FeeOnTransferRejected();
         }
@@ -302,6 +306,10 @@ contract VestingFactory is ReentrancyGuard {
         }
         uint256 completedIntervals = (block.timestamp - schedule.start) / INTERVAL;
         uint256 totalIntervals = schedule.duration / INTERVAL;
+        // Floor division is the spec's vesting math: whole intervals only, and
+        // never rounded in the claimant's favor. The product stays in bounds —
+        // max safe totalAmount per interval count (SECURITY-REVIEW §6).
+        // forge-lint: disable-next-line(divide-before-multiply)
         return (schedule.totalAmount * completedIntervals) / totalIntervals;
     }
 }

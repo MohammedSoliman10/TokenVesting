@@ -74,7 +74,8 @@ contract TestTokenTest is Test {
         vm.prank(alice);
         token.faucet();
 
-        vm.warp(block.timestamp + 24 hours);
+        uint256 nextAvailable = vm.getBlockTimestamp() + 24 hours;
+        vm.warp(nextAvailable);
         vm.prank(alice);
         token.faucet();
 
