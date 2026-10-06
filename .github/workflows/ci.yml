@@ -102,3 +102,12 @@ jobs:
 
       - name: Theme check (fonts, CSS vars, press-tile, no dark mode)
         run: node scripts/theme-check.mjs
+
+      # Regression gate for the qr/cuer breakage: RainbowKit's QR renderer
+      # (cuer) hardcodes `border: 0`, and qr >= 0.6.0 throws on it — React 19
+      # then unmounted the whole tree, so every wallet row served a blank white
+      # screen. Phase 1 of this check calls the exact production function and
+      # needs no WalletConnect project id, so it runs here; the browser phase
+      # skips only its QR-render assertion without one.
+      - name: Wallet-connect check (qr border:0 regression, connect modal)
+        run: node scripts/wallet-connect-check.mjs

@@ -193,11 +193,13 @@ cd frontend
 npm run lint && npm run typecheck && npm test && npm run build
 
 # Browser checks (Playwright) — each script spawns its OWN `vite preview`
-# (ports 4173/4174) and serves dist/, so: run `npm run build` first, and start
-# NO dev server.
+# (ports 4173/4174/4175) and serves dist/, so: run `npm run build` first, and
+# start NO dev server. The wallet-connect check also clicks every row of the
+# RainbowKit modal and asserts the QR view renders instead of crashing.
 npm run build
 node scripts/responsive-check.mjs
 node scripts/theme-check.mjs
+node scripts/wallet-connect-check.mjs
 
 # Live checks against the DEPLOYED site (no wallet needed; the e2e run injects
 # a stub window.ethereum — the signing key is passed ONLY via the E2E_PK env
@@ -218,7 +220,7 @@ forge fmt --check && forge build --deny warnings && forge test && ./script/cover
 cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 ```
 
-CI runs the two browser checks as well (after the build), and a separate
+CI runs the three browser checks as well (after the build), and a separate
 [`live-check.yml`](.github/workflows/live-check.yml) workflow re-runs
 `live-check.mjs` against the **production** URL every day — CI proves the repo
 builds, the daily run proves the deployed site still serves a working app.

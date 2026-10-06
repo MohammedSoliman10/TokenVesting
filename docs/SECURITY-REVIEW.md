@@ -285,6 +285,26 @@ security updates** (`.github/dependabot.yml`).
   `query-string` and nested-`viem` findings, which were reported transitively
   through these two.
 
+**A functional break rather than an advisory — also fixed by an override.**
+`qr` (RainbowKit's QR encoder, pulled in through `cuer@0.0.3`) is pinned to
+`0.5.5`. `cuer/QrCode` hardcodes `border: 0` in its `encodeQR(...)` call, and
+`qr@0.6.0` added `if (border <= 0) throw` — `0.7.2` still carries it — so a
+fresh resolve made `cuer/QrCode.create()` throw `RangeError: invalid border=0`
+inside a `useMemo` render pass. React 19 unmounts the tree on an uncaught
+render error, so **every row of the connect modal — Rainbow, WalletConnect and
+MetaMask — served a blank white page** on the deployed site. The lockfile had
+resolved to `0.7.2` since the first scaffold commit; nothing surfaced it
+because the e2e suite drives the MetaMask row through a stub provider and never
+renders a QR. `0.5.5` is the last release whose `encodeQR` accepts `border: 0`,
+and its `encodeQR(text, 'raw', opts)` signature is exactly what `cuer` calls.
+This override is deliberately **unscoped** (`"qr": "0.5.5"` rather than
+`qr@0.7.2 → 0.5.5`): `cuer` declares `"qr": "~0"`, so without a global pin any
+future 0.x resolve is free to reintroduce the same break. It does not appear in
+`npm audit` — it is guarded behaviourally by
+`frontend/scripts/wallet-connect-check.mjs`, whose phase 1 calls the exact
+production function (proven **red on `0.7.2`, green on `0.5.5`**) and whose
+phase 2 clicks every modal row in a real browser.
+
 **Not fixed, and deliberately so** (all 9 remaining moderates require a breaking
 major): `wagmi` 2→3, `@rainbow-me/rainbowkit`, `@metamask/sdk` /
 `@metamask/utils` / `@walletconnect/*`, and `uuid` 9→11. `npm audit fix --force`
@@ -310,16 +330,25 @@ Parsed with `python3 -c "import yaml"` (PyYAML 6.0.3):
 
 - **Workflow:** `CI`, triggers `push: [main]` + `pull_request`, **env
   `FOUNDRY_PROFILE: ci`** — set for every step.
-- **Job `contracts`** (ubuntu-latest): `actions/checkout@v4` with
+- **Runner:** both jobs are pinned to `ubuntu-24.04` (not `ubuntu-latest`), and
+  every action is on a node24 major (`checkout@v5`, `setup-node@v5`,
+  `upload-artifact@v6`), so an image or Node-version swap cannot land silently
+  under a green branch.
+- **Job `contracts`** (`ubuntu-24.04`): `actions/checkout@v5` with
   **`submodules: recursive`** ✅ → `foundry-rs/foundry-toolchain@v1` →
   `forge fmt --check` → `forge build --deny warnings` → `forge test -vvv` →
-  `./script/coverage-gate.sh`. Every command exists in this repo (each was run
-  for §10 / PART 4 of this review; `coverage-gate.sh` is committed at
-  `script/coverage-gate.sh`).
-- **Job `frontend`** (working-directory `frontend`): `actions/checkout@v4` →
-  `actions/setup-node@v4` (node 24, npm cache on `frontend/package-lock.json`) →
-  `npm ci` → `npm run lint` → `npm run typecheck` → `npm test` → `npm run build`.
-  All four npm scripts exist in `frontend/package.json`.
+  `./script/coverage-gate.sh` → `actions/upload-artifact@v6` publishing
+  `lcov.info` with `if: always()`, so a **failed** coverage gate still ships the
+  report. Every command exists in this repo (each was run for §10 / PART 4 of
+  this review; `coverage-gate.sh` is committed at `script/coverage-gate.sh`).
+- **Job `frontend`** (`ubuntu-24.04`, working-directory `frontend`):
+  `actions/checkout@v5` → `actions/setup-node@v5` (node 24, npm cache on
+  `frontend/package-lock.json`) → `npm ci` → `npm run lint` →
+  `npm run typecheck` → `npm test` → `npm run build` →
+  `npx playwright install --with-deps chromium` →
+  `scripts/responsive-check.mjs` → `scripts/theme-check.mjs` →
+  `scripts/wallet-connect-check.mjs`. The npm scripts and the three check
+  scripts all exist in `frontend/`.
 - **Fuzz seeds are fixed:** `foundry.toml` → `[profile.default] fuzz = { runs = 256,
   seed = "0x5eed" }`; `[profile.ci] fuzz = { runs = 512, seed = "0x5eed" }`,
   invariant `runs = 128, depth = 50` under `ci` — same seed, more runs. The
