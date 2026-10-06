@@ -1,0 +1,53 @@
+# Scheduled smoke test of the PRODUCTION deployment.
+#
+# CI (ci.yml) proves the repo builds and the tests pass. It does not prove the
+# site is still serving a working app: Vercel config, DNS, a bad env var or an
+# upstream outage only show up against the live URL. This workflow loads
+# https://token-vesting-lyart.vercel.app at desktop and mobile widths and
+# asserts the app shell, the Etherscan factory link and zero console errors.
+#
+# NO SECRETS are used or required: live-check.mjs only fetches public pages and
+# public RPC data, so this file is safe to read and this job gets no secrets.
+# GitHub emails the repo owner when a scheduled run fails.
+name: Live check
+
+on:
+  schedule:
+    - cron: '17 6 * * *' # daily 06:17 UTC (off the top of the hour, which is
+    #                     # heavily loaded and frequently delayed)
+  workflow_dispatch: # manual re-run from the Actions tab
+
+# Never let two live checks (or a push-triggered run) race each other.
+concurrency:
+  group: live-check
+  cancel-in-progress: false
+
+permissions:
+  contents: read # least privilege — this job needs nothing else
+
+jobs:
+  live-check:
+    name: Production site serves landing + dashboard
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies (exact pins)
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Live check (desktop 1280x800 + mobile 375x812)
+        run: node scripts/live-check.mjs https://token-vesting-lyart.vercel.app
