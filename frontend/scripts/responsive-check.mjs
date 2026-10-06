@@ -44,7 +44,12 @@ const serverOutput = [];
 function startPreviewServer() {
   const child = spawn(
     process.execPath,
-    [resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort'],
+    // --host 127.0.0.1 pins the bind to IPv4 loopback so it always matches
+    // BASE_URL. Without it vite binds whatever `localhost` resolves to first,
+    // and getaddrinfo ordering differs by machine: on the CI runner it returns
+    // ::1, so preview listened on [::1]:4173 while we probed 127.0.0.1 and the
+    // wait timed out. Binding and probing the same address is deterministic.
+    [resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'],
     { cwd: frontendDir, stdio: ['ignore', 'pipe', 'pipe'] },
   );
   const capture = (chunk) => {

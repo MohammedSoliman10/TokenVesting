@@ -57,7 +57,8 @@ const serverOutput = [];
 function startPreviewServer() {
   const child = spawn(
     process.execPath,
-    [resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort'],
+    // --host 127.0.0.1: same IPv4/IPv6 bind fix as responsive-check.mjs.
+    [resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'],
     { cwd: frontendDir, stdio: ['ignore', 'pipe', 'pipe'] },
   );
   const capture = (chunk) => {
