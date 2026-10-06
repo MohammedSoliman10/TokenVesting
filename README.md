@@ -263,15 +263,21 @@ git add frontend/src/contracts && git commit -m "chore: record Sepolia deploymen
 - **Environment variables** (production, as configured):
   - `VITE_CHAIN_ID` = `11155111`
   - `VITE_RPC_URL` = `https://ethereum-sepolia-rpc.publicnode.com`
-  - `VITE_WALLETCONNECT_PROJECT_ID` = optional — **not set**; the app falls
-    back to the default id, which is fine for injected wallets (MetaMask).
-    Set it (free at <https://cloud.reown.com>) to enable WalletConnect pairing,
-    then redeploy.
+  - `VITE_WALLETCONNECT_PROJECT_ID` = **set** (the Reown/WalletConnect Cloud
+    project id — a *public* identifier baked into the JS bundle). Without it the
+    app falls back to a placeholder: injected wallets (MetaMask) still work, but
+    Reown answers the relay with 400/403 and WalletConnect pairing is dead. Create
+    one free at <https://cloud.reown.com>.
   - Never put an archive-node API key in `VITE_*` vars — they are baked into
     the public JS bundle.
-- After the first deploy, **add the Vercel domain to the allowed domains** in
-  your WalletConnect/Reown project settings (Project → Allowed domains), or
-  WalletConnect connections will be refused on that origin.
+- **Add the Vercel domains to the allowed domains** in your WalletConnect/Reown
+  project settings (Project → Allowed domains) — at minimum
+  `https://token-vesting-lyart.vercel.app` — or WalletConnect connections will
+  be refused on that origin.
+- The project's Root Directory is `frontend`, so run the CLI **from the repo
+  root**, not from inside `frontend/` (the latter makes Vercel look for
+  `frontend/frontend` and fail with *"Root Directory … does not exist"*):
+  `npx vercel link --yes --project token-vesting && npx vercel --prod --yes`.
 
 ## Spec-driven development
 

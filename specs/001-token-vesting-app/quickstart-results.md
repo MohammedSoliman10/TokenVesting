@@ -62,3 +62,5 @@ Sepolia (chain 11155111, publicnode RPC), live site
 5. **`VITE_WALLETCONNECT_PROJECT_ID` is not set on Vercel** — injected wallets
    (MetaMask) work via the documented fallback; WalletConnect pairing is the
    one documented manual follow-up (README § Environment).
+   *Resolved in Stage H:* the id is now set on Vercel and the bundle no longer
+   carries the placeholder — see `tasks.md` T077.

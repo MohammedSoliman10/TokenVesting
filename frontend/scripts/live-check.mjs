@@ -15,6 +15,8 @@
  *   - a DIRECT load of /dashboard renders the app shell (React root + header)
  *   - no console errors and no uncaught page errors — network-resource log
  *     lines (failed RPC/relay fetches) are counted and reported, not failed
+ *   - no failed WalletConnect/Reown requests (any 4xx/5xx or transport error
+ *     on a reown/walletconnect host fails the check — Stage H)
  *
  * Screenshots (repo docs/):
  *   docs/screenshots/live-landing-desktop.png
@@ -61,9 +63,32 @@ const VIEWPORTS = [
  */
 const IGNORED_CONSOLE = [/^Failed to load resource/i];
 
+/**
+ * WalletConnect / Reown endpoints (Stage H: the project id is configured on
+ * Vercel, so these MUST succeed). A 4xx/5xx or a transport error here means
+ * wallet pairing is broken, so it is a hard failure — unlike the generic
+ * network-resource log lines counted above, which also cover third-party RPC
+ * flakiness the app cannot control.
+ */
+const RELAY_HOSTS = /(^|\/\/)[^/]*(reown|walletconnect|web3modal)\./i;
+
 function collectErrors(page) {
   const errors = [];
   const ignored = { network: 0 };
+  const relay = [];
+  page.on('response', (response) => {
+    const url = response.url();
+    if (!RELAY_HOSTS.test(url)) return;
+    if (response.status() >= 400) relay.push(`HTTP ${response.status()} ${url}`);
+  });
+  page.on('requestfailed', (request) => {
+    const url = request.url();
+    if (!RELAY_HOSTS.test(url)) return;
+    const reason = request.failure()?.errorText ?? 'failed';
+    // In-flight requests cancelled by our own navigation are not failures.
+    if (/ERR_ABORTED/.test(reason)) return;
+    relay.push(`FAILED ${reason} ${url}`);
+  });
   page.on('console', (message) => {
     if (message.type() !== 'error') return;
     const text = message.text();
@@ -76,7 +101,7 @@ function collectErrors(page) {
   page.on('pageerror', (error) => {
     errors.push(`pageerror: ${error.message}`);
   });
-  return { errors, ignored };
+  return { errors, ignored, relay };
 }
 
 function assert(condition, message, failures) {
@@ -93,7 +118,7 @@ async function main() {
     for (const { name, viewport } of VIEWPORTS) {
       const context = await browser.newContext({ viewport });
       const page = await context.newPage();
-      const { errors, ignored } = collectErrors(page);
+      const { errors, ignored, relay } = collectErrors(page);
 
       // ---- landing ------------------------------------------------------
       const startedAt = Date.now();
@@ -203,6 +228,18 @@ async function main() {
       );
       console.log(
         `${name.padEnd(8)} /dashboard shell ok (${JSON.stringify(shell)}) | notice absent | ${errors.length} console errors (${ignored.network} network-resource lines total)`,
+      );
+
+      // WalletConnect/Reown must be healthy now that the project id is set
+      // (Stage H) — give in-flight relay calls a moment to land first.
+      await page.waitForTimeout(2000);
+      assert(
+        relay.length === 0,
+        `${name}: ${relay.length} failed WalletConnect/Reown request(s):\n    ${relay.join('\n    ')}`,
+        failures,
+      );
+      console.log(
+        `${name.padEnd(8)} wallet relay ok | ${relay.length} failed reown/walletconnect requests | ignored network lines ${ignored.network}`,
       );
 
       await context.close();
