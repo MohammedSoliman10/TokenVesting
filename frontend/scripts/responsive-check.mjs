@@ -12,7 +12,7 @@
  * Usage:  npm run build && node scripts/responsive-check.mjs
  * Exits non-zero on the first failed assertion.
  */
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,12 +34,36 @@ const ROUTES = ['/', '/create', '/dashboard'];
  */
 const IGNORED_CONSOLE = [/^Failed to load resource/i];
 
+/**
+ * The preview child's stdout/stderr are captured (and drained — an unread
+ * pipe eventually back-pressures the child) so that a startup timeout can
+ * report WHY instead of a bare "did not come up".
+ */
+const serverOutput = [];
+
 function startPreviewServer() {
-  return spawn(
+  const child = spawn(
     process.execPath,
     [resolve(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(PORT), '--strictPort'],
     { cwd: frontendDir, stdio: ['ignore', 'pipe', 'pipe'] },
   );
+  const capture = (chunk) => {
+    serverOutput.push(String(chunk));
+    if (serverOutput.length > 400) serverOutput.shift();
+  };
+  child.stdout.on('data', capture);
+  child.stderr.on('data', capture);
+  child.on('error', (error) => serverOutput.push(`spawn error: ${error.message}\n`));
+  return child;
+}
+
+/** Listening TCP sockets, so a bind/address mismatch is visible in the log. */
+function listeningSockets() {
+  try {
+    return execFileSync('ss', ['-ltn'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim() || '(ss: no output)';
+  } catch (error) {
+    return `(ss failed: ${error.message})`;
+  }
 }
 
 async function waitForServer(timeoutMs = 30_000) {
@@ -52,7 +76,11 @@ async function waitForServer(timeoutMs = 30_000) {
       // server not accepting connections yet
     }
     if (Date.now() > deadline) {
-      throw new Error(`vite preview did not come up at ${BASE_URL}`);
+      throw new Error(
+        `vite preview did not come up at ${BASE_URL}\n` +
+          `--- vite preview output ---\n${serverOutput.join('') || '(no output)'}\n` +
+          `--- listening TCP sockets ---\n${listeningSockets()}`,
+      );
     }
     await delay(250);
   }
