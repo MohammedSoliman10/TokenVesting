@@ -128,8 +128,10 @@ Both production contracts are far below the limits.
 | `TestToken.faucet` | 23,634 | 63,291 | 81,497 | 90,047 | 10 |
 
 Minima are cheap reverting validation failures; medians are representative
-successful calls. (No `.gas-snapshot` file is tracked; the gas report is the
-record of this review.)
+successful calls. A `.gas-snapshot` **is** tracked: `forge snapshot` writes 61
+entries (every unit/fuzz test plus all 6 invariants individually, with their
+`runs`/`calls` counts), so CI diffs any unexpected gas change against it — run
+`forge snapshot` and commit the result when a gas change is intentional.
 
 ## 6. Overflow bounds — maximum safe amount
 
@@ -251,6 +253,47 @@ exception), plus `frontend/test-results/` and `frontend/playwright-report/`.
 `https://github.com/OpenZeppelin/openzeppelin-contracts`; `git submodule status`
 shows a pinned commit and `git -C lib/openzeppelin-contracts describe --tags` →
 **`v5.7.0`**.
+
+### Frontend dependency advisories (`npm audit`)
+
+Run from `frontend/`. The repository is **public**, with **secret scanning** and
+**push protection** enabled, plus **Dependabot alerts** and **Dependabot
+security updates** (`.github/dependabot.yml`).
+
+| | findings | high | critical |
+| --- | --- | --- | --- |
+| Before | 24 | **1** | 0 |
+| After scoped overrides | **9** | **0** | 0 |
+
+**Fixed by version-scoped npm overrides** (`frontend/package.json`):
+
+- `ws@8.18.0 → 8.22.0` — **GHSA-96hv-2xvq-fx4p** (high, memory-exhaustion DoS)
+  and GHSA-58qx-3vcg-4xpx. The four vulnerable copies were nested under
+  `viem@2.23.2`, pinned exactly by `@walletconnect/utils`. The override is keyed
+  on `ws@8.18.0`, so `ws@7.5.13` and the root `ws@8.21.0` — neither vulnerable —
+  are untouched.
+- `decode-uri-component@0.2.2 → 0.5.0` — moderate DoS. This also cleared the
+  `query-string` and nested-`viem` findings, which were reported transitively
+  through these two.
+
+**Not fixed, and deliberately so** (all 9 remaining moderates require a breaking
+major): `wagmi` 2→3, `@rainbow-me/rainbowkit`, `@metamask/sdk` /
+`@metamask/utils` / `@walletconnect/*`, and `uuid` 9→11. `npm audit fix --force`
+would pull `wagmi@3.7.7`; no `--force` was used.
+
+**`uuid` — GHSA-w5hq-g745-h8pq (moderate), ignored in Dependabot with
+reasoning.** The advisory is a missing buffer bounds check in `v3/v5/v6`,
+reachable **only when a `buf` argument is passed**. It is patched in `>=11.1.1`,
+but every consumer here pins `^8.3.2` or `^9.0.1`, and `@metamask/sdk` still
+requires `^8.3.2` at `0.34.0` — so the only update path npm can find
+**downgrades `@rainbow-me/rainbowkit` 2.2.11 → 2.0.8**, which Dependabot refuses,
+causing its security-update runs to error instead of opening a PR. Audited
+against this tree: no consumer code calls `v1/v3/v5/v6` at all (only `v4`,
+`parse`, `stringify`, `validate`, `version`, `NIL`; the apparent `v1`/`v5`
+imports found in `node_modules` are uuid's own README examples), so the
+vulnerable path is unreachable here. Force-fixing would need a 2–3 major jump
+across 6 copies. **The advisory is documented here and still reported by
+`npm audit`** — it is scoped out of Dependabot's update attempts, not hidden.
 
 ## 9. CI validation (`.github/workflows/ci.yml`)
 

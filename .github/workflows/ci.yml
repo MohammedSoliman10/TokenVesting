@@ -44,6 +44,21 @@ jobs:
       - name: Coverage gate (>= 95% line coverage on src/)
         run: ./script/coverage-gate.sh
 
+      # lcov.info is gitignored, so the numbers behind the gate only exist on
+      # the machine that ran it. Publish it as an artifact so the exact report
+      # is downloadable from the run. `if: always()` so a FAILED gate can still
+      # be inspected — that is when the report matters most. upload-artifact@v6
+      # is the lowest major on node24 (v4/v5 would reintroduce the Node 20
+      # deprecation warning this workflow just removed).
+      - name: Upload coverage report (lcov.info)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-lcov
+          path: lcov.info
+          if-no-files-found: warn
+          retention-days: 30
+
   frontend:
     name: Frontend — lint, typecheck, test, build, browser checks
     runs-on: ubuntu-24.04

@@ -1,6 +1,7 @@
 # Token Vesting
 
-![CI](https://github.com/MohammedSoliman10/TokenVesting/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/MohammedSoliman10/TokenVesting/actions/workflows/ci.yml/badge.svg)](https://github.com/MohammedSoliman10/TokenVesting/actions/workflows/ci.yml)
+[![Live check](https://github.com/MohammedSoliman10/TokenVesting/actions/workflows/live-check.yml/badge.svg)](https://github.com/MohammedSoliman10/TokenVesting/actions/workflows/live-check.yml)
 
 A small spec-driven dApp for creating, viewing and claiming ERC-20 vesting
 schedules: grantors lock tokens behind a cliff and 90-day release intervals in a
@@ -9,7 +10,7 @@ on a responsive dashboard and claim exactly what has vested — with wallet and
 network guards, transaction-status recovery, and a generated-artifacts handshake
 that keeps the frontend and the contracts from ever drifting apart.
 
-**Live site**: <https://token-vesting-lyart.vercel.app> — deployed on Vercel, talking to Sepolia (task T062).
+**Live site**: <https://token-vesting-lyart.vercel.app> — deployed on Vercel, talking to Sepolia.
 
 ## Live on Sepolia
 
@@ -28,21 +29,36 @@ Example schedules on the deployed factory:
 | id | Beneficiary | Amount | Origin |
 | -- | ----------- | ------ | ------ |
 | 1 | `0x8E691e…27140DB47` (owner) | 100 TEST | Sepolia smoke run ([tx](https://sepolia.etherscan.io/tx/0xd0971ff61df6c80cdb01badb75d61cc87c3e9cecd25c0ffe134922f1c1681995)) |
-| 2 | `0x8E691e…27140DB47` (owner) | 100 TEST | duplicate — transient parser bug in the first smoke run (disclosed, not deleted) |
 | 3 | `0x5b7764…315Ce7B4` (deployer) | 100 TEST | Sepolia smoke run ([tx](https://sepolia.etherscan.io/tx/0xca4fce7c266f1ab8175bd188c0f74a1d0254a6da7e0028f35b232bbe43ba4aab)) |
-| 4–6 | `0x8E691e…27140DB47` (owner) | 10 TEST each | `live-e2e.mjs` runs (4/5 = development attempts, 6 = the passing run, [tx](https://sepolia.etherscan.io/tx/0xf6347485b19fc11484bb3e385d80b37ebaff9b4765b104ab3036f5ad48b68500)) |
+| 6 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` passing run ([tx](https://sepolia.etherscan.io/tx/0xf6347485b19fc11484bb3e385d80b37ebaff9b4765b104ab3036f5ad48b68500)) |
+| 7 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` re-run after the dependency fix ([tx](https://sepolia.etherscan.io/tx/0xaa717c31bf927657af1e6247641d5456d3a79241667420863a8943c7a1d34916)) |
 
-![Live landing page — desktop](docs/screenshots/live-landing-desktop.png)
+Ids 2, 4 and 5 also exist on-chain and are deliberately **not** deleted: 2 is a
+duplicate from a transient parser bug in the first smoke run, and 4 and 5 were
+development attempts of `live-e2e.mjs`.
 
-| Mobile — live landing | Mobile — live dashboard | E2E — creation record (id 6) |
-| --------------------- | ----------------------- | ---------------------------- |
-| ![Live landing mobile](docs/screenshots/live-landing-mobile.png) | ![Live dashboard mobile](docs/screenshots/live-dashboard-mobile.png) | ![E2E creation record](docs/screenshots/live-e2e-create-confirmation.png) |
+Screenshots are interleaved so the **deployed site** sits next to the **local
+build** for the same viewport — any drift between them is visible at a glance.
 
-![Landing page — desktop](docs/screenshots/landing-desktop.png)
+**Desktop — 1280×800**
 
-| Mobile — landing | Mobile — create | Mobile — dashboard |
-| ---------------- | --------------- | ------------------ |
-| ![Landing mobile](docs/screenshots/landing-mobile.png) | ![Create schedule mobile](docs/screenshots/create-mobile.png) | ![Dashboard mobile](docs/screenshots/dashboard-mobile.png) |
+| Landing — live (deployed) | Landing — local build |
+| ------------------------- | --------------------- |
+| ![Live landing page — desktop](docs/screenshots/live-landing-desktop.png) | ![Landing page — desktop](docs/screenshots/landing-desktop.png) |
+
+**Mobile — 375×812**
+
+| View | Live (deployed) | Local build |
+| ---- | --------------- | ----------- |
+| Landing | ![Live landing mobile](docs/screenshots/live-landing-mobile.png) | ![Landing mobile](docs/screenshots/landing-mobile.png) |
+| Dashboard | ![Live dashboard mobile](docs/screenshots/live-dashboard-mobile.png) | ![Dashboard mobile](docs/screenshots/dashboard-mobile.png) |
+| Create schedule | — | ![Create schedule mobile](docs/screenshots/create-mobile.png) |
+
+**Live end-to-end run — real Sepolia tx, schedule id 7**
+
+| Pending tx | Creation record | Beneficiary dashboard |
+| ---------- | --------------- | --------------------- |
+| ![E2E pending chip](docs/screenshots/live-e2e-pending-chip.png) | ![E2E creation record](docs/screenshots/live-e2e-create-confirmation.png) | ![E2E owner dashboard](docs/screenshots/live-e2e-dashboard-owner.png) |
 
 ## Features
 
@@ -158,14 +174,16 @@ only — never reuse them on a real network.
 
 ```bash
 # Contracts — unit + fuzz + invariant (fixed seed 0x5eed): 62 test functions.
-# forge >=1.8.5 (CI's toolchain) prints "57 tests" — it groups the 6 invariant
-# functions into a single suite entry; all 62 still run.
 forge test
 FOUNDRY_PROFILE=ci forge test      # what CI runs: fuzz 512, invariants 128
 
 # Coverage gate — fails below 95% line coverage on src/
 ./script/coverage-gate.sh
 
+# Gas snapshot — committed as .gas-snapshot (61 entries: every unit/fuzz test
+# plus all 6 invariants individually). CI runs the same suite, so an
+# unexpected gas change shows up as a diff on this file.
+forge snapshot
 # Frontend — lint, typecheck, 211 tests, build
 cd frontend
 npm run lint && npm run typecheck && npm test && npm run build
@@ -195,6 +213,16 @@ Merge gates (also run by CI in `.github/workflows/ci.yml`):
 forge fmt --check && forge build --deny warnings && forge test && ./script/coverage-gate.sh
 cd frontend && npm run lint && npm run typecheck && npm test && npm run build
 ```
+
+CI runs the two browser checks as well (after the build), and a separate
+[`live-check.yml`](.github/workflows/live-check.yml) workflow re-runs
+`live-check.mjs` against the **production** URL every day — CI proves the repo
+builds, the daily run proves the deployed site still serves a working app.
+
+Each CI run also uploads its `lcov.info` as the `coverage-lcov` artifact (on
+success *and* on failure, since a failed gate is when you want to read it), and
+the [`v1.0.0` release](https://github.com/MohammedSoliman10/TokenVesting/releases/tag/v1.0.0)
+carries `gas-snapshot.txt` and `lcov.info` as evidence.
 
 ## Environment
 
@@ -252,8 +280,9 @@ the engineering rules (TDD, ≥ 95% coverage, merge gates), then each feature go
 (waves of test-first tasks) → `/speckit.checklist`. The full spec, plan,
 research, data model and task list live in
 [`specs/001-token-vesting-app/`](specs/001-token-vesting-app/) — the task file
-is the source of truth for what is done and what remains (deploy, live URL,
-quickstart run, PR).
+records every task together with the evidence that closed it, and all **68**
+are checked off, including the items that were open for the longest (local
+deploy, live URL, quickstart run, the release PR).
 
 ## Security
 
