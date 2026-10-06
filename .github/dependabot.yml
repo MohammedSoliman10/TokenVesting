@@ -11,6 +11,22 @@ updates:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
+    # uuid: GHSA-w5hq-g745-h8pq (moderate) — a missing buffer bounds check in
+    # v3/v5/v6, reachable ONLY when a `buf` argument is passed. Patched in
+    # >=11.1.1, but every consumer here pins ^8.3.2 or ^9.0.1 (@metamask/sdk
+    # still requires ^8.3.2 at 0.34.0), so the only update path npm can find
+    # DOWNGRADES @rainbow-me/rainbowkit 2.2.11 -> 2.0.8. Dependabot refuses
+    # downgrades, so its security-update run errored on every attempt instead
+    # of opening a PR.
+    #
+    # Verified against this tree: no consumer code calls v1/v3/v5/v6 at all
+    # (only v4, parse, stringify, validate, version, NIL — the v1/v5 lines in
+    # node_modules are uuid's own README examples), so the vulnerable path is
+    # unreachable here. Force-fixing would need a 2-3 major jump across 6
+    # copies, which we do not do. The advisory is still reported by
+    # `npm audit` (see SECURITY-REVIEW.md) rather than silently dropped.
+    ignore:
+      - dependency-name: "uuid"
     # Group the wallet-SDK tree so one PR moves wagmi/rainbowkit/reown together
     # instead of five conflicting ones.
     groups:
