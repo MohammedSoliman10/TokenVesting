@@ -199,6 +199,21 @@ V14 (direct `/dashboard` refresh → no 404)
 - [X] T067 [P] Finalize documentation: README (setup, quickstart, deployed link), note deploy/keystore workflow (`cast wallet import` + `--account`, never raw keys) — in `README.md`
 - [X] T068 Sweep conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `ci:`) and open the PR into `main` with the constitution checklist — repo-wide: history swept (all 14+ commits conventional), release PR merged with the checklist, v1.0.0 tag cut
 
+## Phase 8: Post-Release Hardening (v1.0.0 → v1.1.0 prep)
+
+**Purpose**: fix what shipping exposed — dependency advisories, an unverifiable
+deployment, a UI path that could irreversibly misdirect tokens
+
+- [X] T069 [P] Close the npm audit advisories with **version-scoped overrides only** (no `npm audit fix --force`, no breaking majors) — `frontend/package.json`: `ws@8.18.0 → 8.22.0` (4 copies, **GHSA-96hv-2xvq-fx4p high**) and `decode-uri-component@0.2.2 → 0.5.0`; audit 24 → **9**, high **1 → 0**, critical 0. `ws@7.5.13` / `ws@8.21.0` deliberately untouched (not vulnerable)
+- [X] T070 [P] Make the deployment independently verifiable — `.github/workflows/live-check.yml` daily cron (06:17 UTC) + `workflow_dispatch`, `permissions: contents: read`, **no secrets**; run `37405586623` green
+- [X] T071 Harden CI: pin `runs-on: ubuntu-24.04`, bump `actions/checkout` + `setup-node` to v5 (node24 — removes the Node 20 deprecation annotation), run `responsive-check` + `theme-check` as gates — CI green with **no annotations**; root-caused the first run's failure to `vite preview` binding `[::1]` while the check probed `127.0.0.1` (fix: `--host 127.0.0.1`; no assertion weakened)
+- [X] T072 [P] Enable `.github/dependabot.yml` (npm `/frontend` + github-actions, wallet-SDK group) and repo security updates; record why `uuid` (GHSA-w5hq-g745-h8pq) is scoped out of its update attempts — its only path is a `rainbowkit 2.2.11 → 2.0.8` **downgrade**, and no consumer calls `v1/v3/v5/v6`. Still reported by `npm audit`
+- [X] T073 [P] Docs polish: README badge links, clean schedule ids, interleaved screenshot tables, `og-image.png` (1200×630) + Open Graph/Twitter tags, tracked `.gas-snapshot`, `coverage-lcov` CI artifact, release evidence assets — verified live
+- [X] T074 **Beneficiary confirmation step (strict TDD)** — tests written and run **RED first**, then implemented: a valid submit opens a review step reading the address back in canonical EIP-55 form, warns on all-lowercase input, and gates the wallet behind an explicit *Confirm & create* (`hasUnverifiedChecksum` in `frontend/src/lib/schemas.ts`; `Review` in `frontend/src/pages/CreateSchedule.tsx`)
+- [X] T075 Verify the confirmation step in a **real browser** — `live-e2e.mjs` (extended with the read-back assertions) passed: read-back rendered before any prompt, canonical address, no false warning, confirm → wallet, tx `0x961d9c…418cf` status 1 block 11853225, **schedule id 8**; 217/217 unit tests
+- [ ] T076 In-browser verification with **real MetaMask** (accepted scope) — blocked: the desktop app's browser bridge reports `browser.disconnected`; needs the session opened in the desktop app and Settings → Experimental → browser enabled
+- [ ] T077 WalletConnect/Reown project id (accepted scope) — blocked on a manual `cloud.reown.com` project id; until then the live site logs Reown 400/403 and wallet pairing will not work
+
 ---
 
 ## Dependencies & Execution Order

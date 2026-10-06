@@ -32,6 +32,7 @@ Example schedules on the deployed factory:
 | 3 | `0x5b7764…315Ce7B4` (deployer) | 100 TEST | Sepolia smoke run ([tx](https://sepolia.etherscan.io/tx/0xca4fce7c266f1ab8175bd188c0f74a1d0254a6da7e0028f35b232bbe43ba4aab)) |
 | 6 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` passing run ([tx](https://sepolia.etherscan.io/tx/0xf6347485b19fc11484bb3e385d80b37ebaff9b4765b104ab3036f5ad48b68500)) |
 | 7 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` re-run after the dependency fix ([tx](https://sepolia.etherscan.io/tx/0xaa717c31bf927657af1e6247641d5456d3a79241667420863a8943c7a1d34916)) |
+| 8 | `0x8E691e…27140DB47` (owner) | 100 TEST | `live-e2e.mjs` run verifying the beneficiary read-back step in a real browser ([tx](https://sepolia.etherscan.io/tx/0x961d9c3cd42135090bd38255fec8f16bcb109609dc7f8bcf4f6b3c9efd0418cf)) |
 
 Ids 2, 4 and 5 also exist on-chain and are deliberately **not** deleted: 2 is a
 duplicate from a transient parser bug in the first smoke run, and 4 and 5 were
