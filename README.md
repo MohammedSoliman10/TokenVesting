@@ -9,7 +9,34 @@ on a responsive dashboard and claim exactly what has vested — with wallet and
 network guards, transaction-status recovery, and a generated-artifacts handshake
 that keeps the frontend and the contracts from ever drifting apart.
 
-**Live site**: LIVE_URL_PLACEHOLDER _(placeholder until the Sepolia deploy, task T062)_
+**Live site**: <https://token-vesting-lyart.vercel.app> — deployed on Vercel, talking to Sepolia (task T062).
+
+## Live on Sepolia
+
+| | |
+| --- | --- |
+| Network | Sepolia — chain id `11155111` |
+| `VestingFactory` | [`0x826420f34B8075610aA942AE9fD11f03Ec197438`](https://sepolia.etherscan.io/address/0x826420f34B8075610aA942AE9fD11f03Ec197438) |
+| `TestToken` | [`0xaC6a0FC000d2A3aD4d5dD03811BdF100dc18067e`](https://sepolia.etherscan.io/address/0xaC6a0FC000d2A3aD4d5dD03811BdF100dc18067e) |
+| Deploy tx — TestToken | [`0xdab11ad3…4c69a5d5`](https://sepolia.etherscan.io/tx/0xdab11ad3248a39d7c43299f2f01741b714c07724c8c3c86ba7aa2aa24c69a5d5) |
+| Deploy tx — VestingFactory | [`0x36601c0f…e95acf`](https://sepolia.etherscan.io/tx/0x36601c0f4ccd4fc34b3008a3b94dcc834dff33ecf187bec2f8540629ffe95acf) |
+| Verification | Etherscan **and** Sourcify (both contracts, chain 11155111) |
+| Live checks | `frontend/scripts/live-check.mjs` (shell/leaks) + `live-e2e.mjs` (stub wallet) |
+
+Example schedules on the deployed factory:
+
+| id | Beneficiary | Amount | Origin |
+| -- | ----------- | ------ | ------ |
+| 1 | `0x8E691e…27140DB47` (owner) | 100 TEST | Sepolia smoke run ([tx](https://sepolia.etherscan.io/tx/0xd0971ff61df6c80cdb01badb75d61cc87c3e9cecd25c0ffe134922f1c1681995)) |
+| 2 | `0x8E691e…27140DB47` (owner) | 100 TEST | duplicate — transient parser bug in the first smoke run (disclosed, not deleted) |
+| 3 | `0x5b7764…315Ce7B4` (deployer) | 100 TEST | Sepolia smoke run ([tx](https://sepolia.etherscan.io/tx/0xca4fce7c266f1ab8175bd188c0f74a1d0254a6da7e0028f35b232bbe43ba4aab)) |
+| 4–6 | `0x8E691e…27140DB47` (owner) | 10 TEST each | `live-e2e.mjs` runs (4/5 = development attempts, 6 = the passing run, [tx](https://sepolia.etherscan.io/tx/0xf6347485b19fc11484bb3e385d80b37ebaff9b4765b104ab3036f5ad48b68500)) |
+
+![Live landing page — desktop](docs/screenshots/live-landing-desktop.png)
+
+| Mobile — live landing | Mobile — live dashboard | E2E — creation record (id 6) |
+| --------------------- | ----------------------- | ---------------------------- |
+| ![Live landing mobile](docs/screenshots/live-landing-mobile.png) | ![Live dashboard mobile](docs/screenshots/live-dashboard-mobile.png) | ![E2E creation record](docs/screenshots/live-e2e-create-confirmation.png) |
 
 ![Landing page — desktop](docs/screenshots/landing-desktop.png)
 
@@ -98,7 +125,7 @@ regenerates `frontend/src/contracts/`, which you commit so every environment
 | `script/coverage-gate.sh` | Fails below 95% line coverage on `src/` |
 | `frontend/` | Vite + React + TypeScript app (Plinth theme, wagmi/RainbowKit) |
 | `frontend/src/contracts/` | **Generated** `deployments.json` + `abis/` (committed) |
-| `frontend/scripts/` | `responsive-check.mjs` and `theme-check.mjs` Playwright checks |
+| `frontend/scripts/` | `responsive-check.mjs`, `theme-check.mjs`, plus the live-site checks `live-check.mjs` and `live-e2e.mjs` |
 | `docs/design/` | "Plinth" design system (`theme.md`, `theme.png`) |
 | `docs/screenshots/` | Committed screenshots used in this README |
 | `docs/SECURITY-REVIEW.md` | Security review: findings, slither, gas, limitations |
@@ -150,6 +177,13 @@ npm run build
 node scripts/responsive-check.mjs
 node scripts/theme-check.mjs
 
+# Live checks against the DEPLOYED site (no wallet needed; the e2e run injects
+# a stub window.ethereum — the signing key is passed ONLY via the E2E_PK env
+# var of that one command, never committed):
+node scripts/live-check.mjs https://token-vesting-lyart.vercel.app
+E2E_ADDRESS=0x… E2E_RPC=<sepolia-rpc> node scripts/live-e2e.mjs \
+  https://token-vesting-lyart.vercel.app owner            # read-only run
+
 # End-to-end smoke: faucet → approve → create → warp → claim (anvil must be
 # running with the contracts deployed, and `node` + `cast` on PATH)
 ./script/smoke.sh
@@ -197,10 +231,15 @@ git add frontend/src/contracts && git commit -m "chore: record Sepolia deploymen
 
 - **Root directory:** `frontend` · **Framework:** Vite · **Build command:**
   `npm run build` · **Output directory:** `dist`
-- **Environment variables:**
+- **Environment variables** (production, as configured):
   - `VITE_CHAIN_ID` = `11155111`
-  - `VITE_WALLETCONNECT_PROJECT_ID` = your project id
-  - `VITE_RPC_URL` = optional custom Sepolia RPC
+  - `VITE_RPC_URL` = `https://ethereum-sepolia-rpc.publicnode.com`
+  - `VITE_WALLETCONNECT_PROJECT_ID` = optional — **not set**; the app falls
+    back to the default id, which is fine for injected wallets (MetaMask).
+    Set it (free at <https://cloud.reown.com>) to enable WalletConnect pairing,
+    then redeploy.
+  - Never put an archive-node API key in `VITE_*` vars — they are baked into
+    the public JS bundle.
 - After the first deploy, **add the Vercel domain to the allowed domains** in
   your WalletConnect/Reown project settings (Project → Allowed domains), or
   WalletConnect connections will be refused on that origin.

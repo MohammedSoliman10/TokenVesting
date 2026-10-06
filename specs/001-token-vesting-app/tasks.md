@@ -181,8 +181,8 @@ V14 (direct `/dashboard` refresh → no 404)
 
 - [X] T059 [US4] Build the public landing page (faint dot-grid background, left-aligned hero with soft-coral highlight marks, corner crop marks, logo tile, uppercase wide-tracked labels) per `docs/design/theme.md` and `docs/design/theme.png` — in `frontend/src/pages/Landing.tsx` (green T057)
 - [X] T060 [P] [US4] Theme fidelity audit: tokens, fonts, press states, no gradients/blur/dark mode; fix drift — across `frontend/src/` (green T058)
-- [ ] T061 [US4] Deploy the frontend to Vercel (root directory `/frontend`, env vars per `frontend/.env.example`) after a Sepolia deploy via `script/Deploy.s.sol`; verify quickstart V13 and V14 (deep-link refresh, no 404)
-- [ ] T062 [US4] Replace the README placeholder with the working deployed-site link — in `README.md`
+- [X] T061 [US4] Deploy the frontend to Vercel (root directory `/frontend`, env vars per `frontend/.env.example`) after a Sepolia deploy via `script/Deploy.s.sol`; verify quickstart V13 and V14 (deep-link refresh, no 404) — live at <https://token-vesting-lyart.vercel.app>; V13/V14 verified by `frontend/scripts/live-check.mjs` (see `quickstart-results.md`)
+- [X] T062 [US4] Replace the README placeholder with the working deployed-site link — in `README.md` (live URL + deployed-contracts table with addresses, deploy txs, example schedule ids, live screenshots)
 
 **Checkpoint**: Public site live and reachable from the repository
 
@@ -195,9 +195,9 @@ V14 (direct `/dashboard` refresh → no 404)
 - [X] T063 [P] Run `./script/coverage-gate.sh` and close any gaps until core `src/` line coverage ≥ 95% — across `test/`
 - [X] T064 [P] Security hardening review against the spec: CEI ordering, reentrancy, allowance handling, fee-on-transfer delta, no division by zero, `beneficiary` spelling everywhere, custom errors only — across `src/`, `frontend/src/`
 - [X] T065 [P] Verify all merge gates green locally: `forge fmt --check`, `forge build --deny warnings`, `forge test`, `./script/coverage-gate.sh`, frontend `lint`, `typecheck`, `vitest run`, `build` — repo-wide
-- [ ] T066 Execute `specs/001-token-vesting-app/quickstart.md` scenarios V1–V14 end-to-end (anvil + Sepolia) and fix any failures — via `specs/001-token-vesting-app/quickstart.md`
+- [X] T066 Execute `specs/001-token-vesting-app/quickstart.md` scenarios V1–V14 end-to-end (anvil + Sepolia) and fix any failures — results per scenario in `specs/001-token-vesting-app/quickstart-results.md` (V1–V8 anvil+Sepolia live; V4–V6 time-warp on anvil/fuzz only — impossible on public Sepolia, disclosed)
 - [X] T067 [P] Finalize documentation: README (setup, quickstart, deployed link), note deploy/keystore workflow (`cast wallet import` + `--account`, never raw keys) — in `README.md`
-- [ ] T068 Sweep conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `ci:`) and open the PR into `main` with the constitution checklist — repo-wide
+- [X] T068 Sweep conventional commits (`feat:`, `fix:`, `test:`, `docs:`, `ci:`) and open the PR into `main` with the constitution checklist — repo-wide: history swept (all 14+ commits conventional), release PR merged with the checklist, v1.0.0 tag cut
 
 ---
 
