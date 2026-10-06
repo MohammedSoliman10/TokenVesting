@@ -45,7 +45,6 @@ const RPC = process.env.E2E_RPC;
 const PK = process.env.E2E_PK;
 const ADDRESS = process.env.E2E_ADDRESS;
 const OWNER = '0x8E691e5252a61e3f74E4e1e9759b73F27140DB47';
-const FACTORY = '0x826420f34B8075610aA942AE9fD11f03Ec197438';
 const TEST_TOKEN = '0xaC6a0FC000d2A3aD4d5dD03811BdF100dc18067e';
 
 if (!LIVE_URL || !['deployer', 'owner'].includes(MODE)) {
