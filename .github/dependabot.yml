@@ -1,0 +1,32 @@
+# Dependabot — keeps the two update surfaces in this repo fresh:
+#   - npm (the Vite/React/wagmi frontend: exact pins in package-lock.json)
+#   - github-actions (CI workflow action versions)
+# Security updates are enabled at the repo level too (Settings → Security).
+name: Dependabot
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    # Group the wallet-SDK tree so one PR moves wagmi/rainbowkit/reown together
+    # instead of five conflicting ones.
+    groups:
+      wallet-sdk:
+        patterns:
+          - "wagmi*"
+          - "@wagmi/*"
+          - "@rainbow-me/*"
+          - "@reown/*"
+          - "@walletconnect/*"
+          - "@metamask/*"
+          - "viem"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5

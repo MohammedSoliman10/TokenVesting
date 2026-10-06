@@ -1,6 +1,12 @@
 # CI gates from the constitution (fmt/build/test, frontend lint/tsc/test/build,
 # >= 95% line coverage). Fuzz/invariant seeds are fixed in foundry.toml
 # [profile.ci] (research R10) — FOUNDRY_PROFILE=ci selects them.
+#
+# Runner is PINNED to ubuntu-24.04 rather than ubuntu-latest: the label moves
+# to Ubuntu 26.04 between 2026-10-19 and 2026-11-19, and an image swap under a
+# green branch shows up as a break in the NEXT run, not at the swap. Moving to
+# 26.04 is a deliberate, separately-green commit. Actions are pinned to @v5
+# (node24) to clear the Node 20 deprecation warning.
 name: CI
 
 on:
@@ -14,10 +20,10 @@ env:
 jobs:
   contracts:
     name: Contracts — fmt, build, test, coverage gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout (with OpenZeppelin submodule)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -39,17 +45,17 @@ jobs:
         run: ./script/coverage-gate.sh
 
   frontend:
-    name: Frontend — lint, typecheck, test, build
-    runs-on: ubuntu-latest
+    name: Frontend — lint, typecheck, test, build, browser checks
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
@@ -69,3 +75,15 @@ jobs:
 
       - name: Build (Vite)
         run: npm run build
+
+      # Responsive (375px, T056) and theme-fidelity (T060) checks were
+      # manual-only before this stage. They spawn their OWN `vite preview`
+      # (ports 4173 / 4174), so they run sequentially after the build.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Responsive check (375x812, no h-scroll, /dashboard direct load)
+        run: node scripts/responsive-check.mjs
+
+      - name: Theme check (fonts, CSS vars, press-tile, no dark mode)
+        run: node scripts/theme-check.mjs
