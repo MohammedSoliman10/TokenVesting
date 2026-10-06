@@ -170,20 +170,29 @@ return (schedule.totalAmount * completedIntervals) / totalIntervals; // line 305
    with a **wrong beneficiary address are locked** in the factory until
    `start + duration`, at which point the (wrong) address can claim them — nobody
    else can redirect them. **UI status:** the create form
-   (`frontend/src/pages/CreateSchedule.tsx:291–299`) has **one** beneficiary input;
+   (`frontend/src/pages/CreateSchedule.tsx`) has **one** beneficiary input;
    validation is viem's `isAddress(value)` with default options
-   (`frontend/src/lib/schemas.ts:51`), plus a non-zero check. Verified against
+   (`frontend/src/lib/schemas.ts`), plus a non-zero check. Verified against
    the installed viem **2.57.2** (`node -e` one-liner): it is **not**
    checksum-agnostic — a **mixed-case address with a wrong EIP-55 checksum is
    rejected** (`isAddress(bad) === false`; `isAddress(bad, { strict: false }) === true`,
    so the strict default is what rejects it), an all-lowercase address is
    **accepted** (`isAddress(lowercase) === true`), and an all-uppercase one is
    rejected. So a mistyped checksum only protects users who paste mixed-case
-   addresses; a lowercase typo still passes. There is **no pre-submission
-   confirmation step**, and the rejection uses the generic “must be a 0x
-   address” message rather than a dedicated checksum warning — listed as a
-   limitation; users must double-check the address themselves (paste, don't
-   type).
+   addresses; a lowercase typo still passes.
+   **Mitigation added in Stage F (T069/T070):** a valid submit no longer signs —
+   it opens a review step that (a) reads the beneficiary back in **canonical
+   EIP-55 form** (`getAddress()`), never as typed, (b) shows an inline warning
+   when the address was typed all-lowercase and therefore has an unverified
+   checksum (`hasUnverifiedChecksum()`), and (c) requires an explicit
+   *Confirm & create* before any wallet prompt — *Back to edit* returns to the
+   form with every value intact. The all-digit case deliberately does not warn:
+   there are no letters, so there is no checksum to verify. The warning is a
+   warning, not a hard error, because lowercase input is legitimate.
+   **Still a limitation:** this reduces the chance of a confirmed-but-wrong
+   beneficiary; it does not remove it (a correctly-formed, wrongly-pasted
+   address confirms just as happily), and the absence of revocation is
+   unchanged — **paste, don't type**, and read the read-back before confirming.
 2. **No admin, no pause.** There is no owner, guardian, or circuit breaker on
    `VestingFactory` — by design (immutable, trustless), but it also means a buggy
    schedule or a hostile token cannot be frozen after the fact.

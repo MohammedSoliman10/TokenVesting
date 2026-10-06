@@ -10,15 +10,18 @@
 import { useEffect, useState, cloneElement, isValidElement, type ReactElement, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { formatUnits, isAddress, parseUnits } from 'viem';
+import { formatUnits, getAddress, isAddress, parseUnits } from 'viem';
 import { useAccount, usePublicClient } from 'wagmi';
 import { abiFor, activeChainId, contractAddress, isDeployed } from '../contracts';
 import { useCreateSchedule, type CreatedSchedule } from '../hooks/useCreateSchedule';
 import type { TxState } from '../hooks/useTxStatus';
 import {
+  BENEFICIARY_LOWER_WARNING,
+  BENEFICIARY_REVIEW_LABEL,
   MONTH_CONVENTION_COPY,
   TEST_TOKEN_DECIMALS,
   createScheduleSchema,
+  hasUnverifiedChecksum,
   type CreateScheduleContext,
   type CreateScheduleValues,
 } from '../lib/schemas';
@@ -26,6 +29,7 @@ import { Button } from '../components/primitives/Button';
 import { Card } from '../components/primitives/Card';
 import { FaucetButton } from '../components/FaucetButton';
 import { TxStatus } from '../components/states/TxStatus';
+import { WrongNetworkPrompt } from '../components/states/WrongNetworkPrompt';
 
 const inputClass =
   'w-full rounded-tile border-2 border-ink/30 bg-canvas px-3 py-2 text-sm outline-none focus:border-ink';
@@ -134,6 +138,90 @@ function Confirmation({
   );
 }
 
+/**
+ * Stage F — the beneficiary read-back that gates the wallet prompt.
+ *
+ * A wrong beneficiary is unrecoverable: the tokens stay locked until
+ * `start + duration` and only that address may claim them
+ * (SECURITY-REVIEW §7.1). `isAddress` is checksum-agnostic, so all-lowercase
+ * input passes validation with an unverified checksum. This step therefore
+ * reads the address back in canonical EIP-55 form and warns before anything
+ * is signed — it never blocks, it makes the user deliberate.
+ */
+function Review({
+  values,
+  symbol,
+  isCreating,
+  state,
+  onBack,
+  onConfirm,
+}: {
+  values: CreateScheduleValues;
+  symbol: string;
+  isCreating: boolean;
+  state: TxState;
+  onBack: () => void;
+  onConfirm: () => void;
+}) {
+  // Read back the canonical checksummed form, never the raw typed string.
+  const checksummed = getAddress(values.beneficiary);
+  const warnUnverified = hasUnverifiedChecksum(values.beneficiary);
+  const start =
+    values.startMode === 'now' ? 0 : Math.floor(new Date(values.startDate).getTime() / 1000);
+
+  const rows: Array<[string, string]> = [
+    ['Token', values.token],
+    ['Amount', `${values.amount}${symbol ? ` ${symbol}` : ''}`],
+    ['Cliff', `${values.cliffMonths} months`],
+    ['Duration', `${values.durationMonths} months`],
+    ['Start', startLabel(start)],
+  ];
+
+  return (
+    <section>
+      <p className="label">Confirm before signing</p>
+      <h1 className="mt-3 text-3xl">Review this schedule</h1>
+
+      <Card className="mt-6">
+        <p className="text-sm font-medium">{BENEFICIARY_REVIEW_LABEL}</p>
+        <p className="mt-1 break-all font-mono text-sm">{checksummed}</p>
+        {warnUnverified ? (
+          <p role="alert" className="mt-3 border-l-4 border-ink/40 bg-soft p-3 text-sm">
+            {BENEFICIARY_LOWER_WARNING}
+          </p>
+        ) : null}
+
+        <dl className="mt-4 text-sm">
+          {rows.map(([term, value]) => (
+            <div key={term} className="flex justify-between gap-4 py-1">
+              <dt className="shrink-0 text-ink/60">{term}</dt>
+              <dd className="break-all text-right">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </Card>
+
+      {/* The guard must be visible where the action is: `create()` bails out
+          silently on the wrong chain (ensureChain() → false), so without this
+          the Confirm click would appear to do nothing. */}
+      <WrongNetworkPrompt className="mt-6 w-full" />
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Button type="button" busy={isCreating} onClick={onConfirm}>
+          Confirm &amp; create
+        </Button>
+        <Button type="button" variant="secondary" onClick={onBack}>
+          Back to edit
+        </Button>
+        <TxStatus state={state} />
+      </div>
+      <p className="mt-3 text-xs text-ink/60">
+        Your wallet will ask you to sign two transactions: approve, then create.
+      </p>
+    </section>
+  );
+}
+
 export default function CreateSchedule() {
   const { address } = useAccount();
   const publicClient = usePublicClient();
@@ -147,6 +235,9 @@ export default function CreateSchedule() {
   const [balanceKnown, setBalanceKnown] = useState(false);
   const [balanceError, setBalanceError] = useState(false);
   const [balanceRetry, setBalanceRetry] = useState(0);
+  // Stage F — a valid submit only ARMS this; the wallet stays untouched until
+  // the beneficiary read-back is explicitly confirmed.
+  const [review, setReview] = useState<CreateScheduleValues | null>(null);
 
   const {
     register,
@@ -225,28 +316,59 @@ export default function CreateSchedule() {
     };
   }, [publicClient, address, watchedToken, balanceRetry]);
 
+  /** Exact start as sent on chain, derived from the form's start mode. */
+  const startOf = (values: CreateScheduleValues) =>
+    values.startMode === 'now' ? 0 : Math.floor(new Date(values.startDate).getTime() / 1000);
+
   const onSubmit = (values: CreateScheduleValues) => {
-    // The resolver already proved V1–V6 — nothing below can make the wallet
-    // prompt on an invalid form (FR-018).
-    const start =
-      values.startMode === 'now' ? 0 : Math.floor(new Date(values.startDate).getTime() / 1000);
+    // The resolver already proved V1–V6 (FR-018). Stop here for the Stage F
+    // beneficiary read-back instead of prompting the wallet.
+    // With no wallet there is nothing to sign, so there is nothing to review —
+    // the submit button is already disabled in that state (T053).
+    if (!address) return;
+    setReview(values);
+  };
+
+  /** Only reachable from the review step — this is what touches the wallet. */
+  const confirmSubmit = () => {
+    if (!review) return;
     void create({
-      token: values.token,
-      beneficiary: values.beneficiary,
-      start,
-      cliffMonths: Number(values.cliffMonths),
-      durationMonths: Number(values.durationMonths),
-      amount: parseUnits(values.amount, TEST_TOKEN_DECIMALS),
+      token: review.token,
+      beneficiary: review.beneficiary,
+      start: startOf(review),
+      cliffMonths: Number(review.cliffMonths),
+      durationMonths: Number(review.durationMonths),
+      amount: parseUnits(review.amount, TEST_TOKEN_DECIMALS),
     });
   };
+
+  // A failed create returns to the form with every value intact (T029) — the
+  // review step gates the wallet, it is not a dead end.
+  useEffect(() => {
+    if (state.status === 'failed') setReview(null);
+  }, [state.status]);
 
   const handleCreateAnother = () => {
     resetForm(); // back to defaultValues — fresh form, fresh store
     reset(); // clear the confirmation view and tx state
+    setReview(null);
   };
 
   if (created) {
     return <Confirmation created={created} symbol={symbol} onReset={handleCreateAnother} />;
+  }
+
+  if (review) {
+    return (
+      <Review
+        values={review}
+        symbol={symbol}
+        isCreating={isCreating}
+        state={state as TxState}
+        onBack={() => setReview(null)}
+        onConfirm={confirmSubmit}
+      />
+    );
   }
 
   return (

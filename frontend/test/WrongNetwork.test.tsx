@@ -196,12 +196,20 @@ describe('wrong-network guard for every write path (T048)', () => {
     expect(promptShown()).toBeInTheDocument();
 
     // submit #1: switch rejected → no write
+    // Stage F: "Create schedule" only arms the beneficiary read-back; the
+    // guard lives behind it, so the wallet is touched on Confirm.
     fillValidForm();
     fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm & create' }));
     await waitFor(() =>
       expect(wagmi.switchChainAsync).toHaveBeenCalledWith({ chainId: activeChainId }),
     );
     expect(wagmi.writeContractAsync).not.toHaveBeenCalled();
+
+    // The prompt must be visible ON the review step too — `create()` bails out
+    // silently on the wrong chain, so a bare Confirm would do nothing at all.
+    expect(promptShown()).toBeInTheDocument();
+    expect(switchButton()).toBeInTheDocument();
 
     // submit #2: switch succeeds → approve then create
     wagmi.switchChainAsync.mockReset();
@@ -209,7 +217,7 @@ describe('wrong-network guard for every write path (T048)', () => {
     wagmi.writeContractAsync
       .mockResolvedValueOnce(APPROVE_HASH)
       .mockResolvedValueOnce(CREATE_HASH);
-    fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Confirm & create' }));
     await waitFor(() =>
       expect(wagmi.writeContractAsync).toHaveBeenCalledWith(
         expect.objectContaining({ functionName: 'approve' }),

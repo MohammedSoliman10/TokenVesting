@@ -12,7 +12,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { encodeAbiParameters, encodeEventTopics } from 'viem';
+import { encodeAbiParameters, encodeEventTopics, getAddress } from 'viem';
 
 const mocks = vi.hoisted(() => ({
   writeContract: vi.fn(),
@@ -51,7 +51,10 @@ import { abiFor, activeChainId, contractAddress } from '../src/contracts';
 import {
   AMOUNT_BALANCE_MESSAGE,
   AMOUNT_POSITIVE_MESSAGE,
+  BENEFICIARY_LOWER_WARNING,
+  BENEFICIARY_REVIEW_LABEL,
   DURATION_MESSAGE,
+  INVALID_ADDRESS_MESSAGE,
   MONTH_CONVENTION_COPY,
 } from '../src/lib/schemas';
 
@@ -76,6 +79,16 @@ function fillValidForm() {
 
 function submit() {
   fireEvent.click(screen.getByRole('button', { name: 'Create schedule' }));
+}
+
+/**
+ * Stage F — the review step gates the wallet, so confirm explicitly.
+ *
+ * Awaits the step: react-hook-form's zodResolver is async, so the review
+ * panel only renders on a later tick than the click that armed it.
+ */
+async function confirm() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Confirm & create' }));
 }
 
 const calledContracts = () =>
@@ -145,6 +158,7 @@ describe('CreateSchedule form (T028)', () => {
 
     fillValidForm();
     submit();
+    await confirm();
 
     await waitForWriteContract();
     expect(mocks.writeContractAsync).toHaveBeenCalledTimes(1);
@@ -167,6 +181,7 @@ describe('CreateSchedule form (T028)', () => {
     });
     fillValidForm();
     submit();
+    await confirm();
 
     await waitForWriteContract();
     const expectedSeconds = BigInt(Math.floor(new Date(picked).getTime() / 1000));
@@ -183,6 +198,7 @@ describe('CreateSchedule form (T028)', () => {
 
     fillValidForm();
     submit();
+    await confirm();
 
     await waitForWriteContract();
     expect(calledContracts()).toEqual(['createSchedule']);
@@ -209,6 +225,7 @@ describe('CreateSchedule failure + retry (T029 binding)', () => {
 
     fillValidForm();
     submit();
+    await confirm();
 
     // Failure surfaces a friendly message; nothing of the input is lost.
     expect(
@@ -223,6 +240,7 @@ describe('CreateSchedule failure + retry (T029 binding)', () => {
     // The approval was mined before the failure → allowance now covers it.
     mocks.allowance = 100n * 10n ** 18n;
     submit();
+    await confirm();
 
     expect(await screen.findByText('Schedule created')).toBeInTheDocument();
     expect(calledContracts()).toEqual(['approve', 'createSchedule', 'createSchedule']);
@@ -260,6 +278,7 @@ describe('CreateSchedule confirmation view (T030)', () => {
 
     fillValidForm();
     submit();
+    await confirm();
 
     expect(await screen.findByText('Schedule created')).toBeInTheDocument();
     expect(screen.getByText('7')).toBeInTheDocument(); // creation record: schedule id
@@ -333,6 +352,109 @@ describe('CreateSchedule balance read failure (T052 audit)', () => {
 
     expect(await screen.findByText('Balance: 1000 TEST')).toBeInTheDocument();
     expect(screen.queryByText('Could not read your balance.')).not.toBeInTheDocument();
+  });
+});
+
+describe('CreateSchedule beneficiary confirmation (Stage F)', () => {
+  const LOWER = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd';
+  const CHECKSUMMED = '0xABcdEFABcdEFabcdEfAbCdefabcdeFABcDEFabCD';
+
+  it('reads the beneficiary address back BEFORE any wallet prompt', async () => {
+    mocks.allowance = FULL_BALANCE;
+    render(<CreateSchedule />);
+    await screen.findByText('Balance: 1000 TEST');
+
+    fillValidForm();
+    submit();
+
+    // the review step must gate the wallet: nothing signed yet
+    expect(mocks.writeContractAsync).not.toHaveBeenCalled();
+    expect(mocks.writeContract).not.toHaveBeenCalled();
+    expect(
+      await screen.findByText(BENEFICIARY_REVIEW_LABEL),
+    ).toBeInTheDocument();
+    // read back in canonical EIP-55 checksummed form, not as typed
+    expect(screen.getByText(getAddress(BENEFICIARY))).toBeInTheDocument();
+  });
+
+  it('warns inline when the beneficiary address was typed in all lowercase', async () => {
+    render(<CreateSchedule />);
+    await screen.findByText('Balance: 1000 TEST');
+
+    fireEvent.change(screen.getByLabelText('Beneficiary address'), {
+      target: { value: LOWER },
+    });
+    fireEvent.change(screen.getByLabelText('Cliff (months)'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('Duration (months)'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Amount (TEST)'), { target: { value: '100' } });
+    submit();
+
+    expect(await screen.findByText(BENEFICIARY_LOWER_WARNING)).toBeInTheDocument();
+    // and it is a warning, not a hard error — the form still allows proceeding
+    expect(screen.queryByText(INVALID_ADDRESS_MESSAGE)).not.toBeInTheDocument();
+  });
+
+  it('does NOT warn when the address is already checksummed', async () => {
+    render(<CreateSchedule />);
+    await screen.findByText('Balance: 1000 TEST');
+
+    fireEvent.change(screen.getByLabelText('Beneficiary address'), {
+      target: { value: CHECKSUMMED },
+    });
+    fireEvent.change(screen.getByLabelText('Cliff (months)'), { target: { value: '3' } });
+    fireEvent.change(screen.getByLabelText('Duration (months)'), { target: { value: '6' } });
+    fireEvent.change(screen.getByLabelText('Amount (TEST)'), { target: { value: '100' } });
+    submit();
+
+    expect(await screen.findByText(BENEFICIARY_REVIEW_LABEL)).toBeInTheDocument();
+    expect(screen.queryByText(BENEFICIARY_LOWER_WARNING)).not.toBeInTheDocument();
+  });
+
+  it('does NOT warn for an all-digit address (there is no checksum to verify)', async () => {
+    render(<CreateSchedule />);
+    await screen.findByText('Balance: 1000 TEST');
+
+    fillValidForm(); // BENEFICIARY is 40 digits — all lowercase, but checksum-less
+    submit();
+
+    expect(await screen.findByText(BENEFICIARY_REVIEW_LABEL)).toBeInTheDocument();
+    expect(screen.queryByText(BENEFICIARY_LOWER_WARNING)).not.toBeInTheDocument();
+  });
+
+  it('"Back to edit" returns to the form with the data intact and signs nothing', async () => {
+    render(<CreateSchedule />);
+    await screen.findByText('Balance: 1000 TEST');
+
+    fillValidForm();
+    submit();
+    expect(await screen.findByText(BENEFICIARY_REVIEW_LABEL)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to edit' }));
+
+    expect(screen.getByLabelText('Beneficiary address')).toHaveValue(BENEFICIARY);
+    expect(screen.getByLabelText('Cliff (months)')).toHaveValue(3);
+    expect(screen.getByLabelText('Amount (TEST)')).toHaveValue('100');
+    expect(mocks.writeContractAsync).not.toHaveBeenCalled();
+    expect(screen.queryByText(BENEFICIARY_REVIEW_LABEL)).not.toBeInTheDocument();
+  });
+
+  it('reaches the wallet only after an explicit Confirm', async () => {
+    mocks.allowance = FULL_BALANCE;
+    render(<CreateSchedule />);
+    await screen.findByText('Balance: 1000 TEST');
+
+    fillValidForm();
+    submit();
+    expect(await screen.findByText(BENEFICIARY_REVIEW_LABEL)).toBeInTheDocument();
+    expect(mocks.writeContractAsync).not.toHaveBeenCalled();
+
+    await confirm();
+
+    await waitForWriteContract();
+    expect(mocks.writeContractAsync.mock.calls[0][0]).toMatchObject({
+      functionName: 'createSchedule',
+      args: [TOKEN, BENEFICIARY, 0n, 3n, 6n, 100n * 10n ** 18n],
+    });
   });
 });
 

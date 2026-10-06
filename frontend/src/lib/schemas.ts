@@ -40,6 +40,42 @@ export interface CreateScheduleContext {
 const addressMessage = (label: string) => `${label} must be a 0x address.`;
 const zeroAddressMessage = (label: string) => `${label} address cannot be the zero address.`;
 
+/** Exported for the confirmation step's tests (Stage F). */
+export const INVALID_ADDRESS_MESSAGE = addressMessage('Beneficiary');
+
+/** Copy for the review step that gates the wallet prompt (Stage F). */
+export const BENEFICIARY_REVIEW_LABEL = 'Beneficiary address (read back)';
+
+/**
+ * Inline warning for an all-lowercase beneficiary address.
+ *
+ * `isAddress` is checksum-agnostic: it ACCEPTS an all-lowercase address, so a
+ * typo in one that was never checksummed would sail straight through to the
+ * chain, where a wrong beneficiary means the tokens are locked for good
+ * (SECURITY-REVIEW §7.1). This is a warning rather than an error — lowercase
+ * input is legitimate — so it sits next to the read-back and lets the user
+ * proceed deliberately.
+ */
+export const BENEFICIARY_LOWER_WARNING =
+  'This address was typed in all lowercase, so its EIP-55 checksum was never verified — ' +
+  'a mistyped character would not be caught, and a wrong beneficiary cannot be corrected later. ' +
+  'Check it character by character before confirming.';
+
+/**
+ * True when a VALID address was typed entirely in lowercase and therefore has
+ * an unverified EIP-55 checksum.
+ *
+ * An all-digit address is deliberately excluded: it contains no letters, so
+ * there is no checksum to verify and warning would be noise. Equivalently, the
+ * condition holds exactly when the typed form differs from its canonical
+ * `getAddress()` form.
+ */
+export function hasUnverifiedChecksum(address: string): boolean {
+  const body = address.startsWith('0x') || address.startsWith('0X') ? address.slice(2) : address;
+  if (!/[a-f]/.test(body)) return false; // no lowercase hex letters → nothing to verify
+  return body === body.toLowerCase();
+}
+
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 /** V1/V2: a usable address that is not the zero address. */

@@ -328,9 +328,34 @@ async function main() {
 
       await page.getByRole('button', { name: 'Create schedule' }).click();
 
+      // Stage F — the submit only ARMS the beneficiary read-back; nothing is
+      // signed until the checksummed address is explicitly confirmed.
+      await page.getByText('Beneficiary address (read back)').waitFor({ timeout: 30_000 });
+      ok('beneficiary read-back rendered before any wallet prompt');
+
+      const readBackText =
+        (
+          await page
+            .locator('p:has-text("Beneficiary address (read back)") + p')
+            .first()
+            .textContent()
+        )?.trim() ?? '';
+      check(
+        readBackText === OWNER,
+        `read-back shows the canonical EIP-55 address (${readBackText.slice(0, 12)}…)`,
+      );
+      // OWNER is properly checksummed, so the all-lowercase warning must NOT fire.
+      check(
+        (await page.getByText(/typed in all lowercase/).count()) === 0,
+        'no all-lowercase warning for an already-checksummed address',
+      );
+
+      await page.getByRole('button', { name: 'Confirm & create' }).click();
+      ok('confirmed the read-back — the wallet is only prompted now');
+
       // pending chip while the tx is in flight
       await page.getByText(/: Pending/).first().waitFor({ timeout: 90_000 });
-      ok('pending chip observed after submit ("Create schedule: Pending")');
+      ok('pending chip observed after confirm ("Create schedule: Pending")');
       await page.screenshot({ path: resolve(screenshotsDir, 'live-e2e-pending-chip.png') });
 
       // The create flow's terminal success state IS the confirmation view

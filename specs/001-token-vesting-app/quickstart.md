@@ -49,7 +49,7 @@ chain and lists them without any hardcoded addresses.
 
 | # | Scenario | Steps | Expected outcome | Proves |
 |---|----------|-------|------------------|--------|
-| V1 | Grantor creates + funds a schedule | Connect wallet (anvil) → fund via "Get test tokens" (faucet) or owner `mint` → `/create` → fill valid form (start **now**) → approve → create | Schedule listed with exact params; grantor balance decreased by full amount; `ScheduleCreated` emitted | US1, FR-001/002/014a/019, SC-001 |
+| V1 | Grantor creates + funds a schedule | Connect wallet (anvil) → fund via "Get test tokens" (faucet) or owner `mint` → `/create` → fill valid form (start **now**) → **beneficiary read-back review → Confirm & create** → approve → create | Schedule listed with exact params; grantor balance decreased by full amount; `ScheduleCreated` emitted | US1, FR-001/002/014a/019, SC-001 |
 | V2 | Inline validation before wallet prompts | Enter: past start, 4-month duration, 1-month cliff, zero amount, zero address | Each blocked with a specific field error; **no** wallet popup appears | US1.2, FR-003/018, Clar. 1–2 |
 | V3 | Nothing releasable before cliff | Create schedule with cliff ≥ 3 months → view `/dashboard` immediately | Releasable = 0, claim button disabled with "nothing vested yet" | US2.1, SC-003 |
 | V4 | Cliff + interval unlock math | `cast rpc evm_increaseTime <seconds>` past cliff and one interval, then `cast rpc evm_mine` → reload dashboard | Releasable = (completed intervals ÷ total) × total − released; claim transfers exactly that amount; `TokensReleased` emitted | US2.2–2.3, FR-008/010 |

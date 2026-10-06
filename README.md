@@ -299,8 +299,13 @@ Copied from the security review (§7) — read the
 1. **No revocation** — a wrong beneficiary address locks the tokens until
    `start + duration`, when only that address can claim. The create form has one
    beneficiary input validated with viem's `isAddress` (mixed-case input with a
-   wrong EIP-55 checksum **is** rejected; all-lowercase input passes), but there
-   is **no confirmation step** — double-check the address yourself.
+   wrong EIP-55 checksum **is** rejected; all-lowercase input passes), and a valid
+   submit now stops at a **review step** that reads the address back in canonical
+   EIP-55 form, warns when it was typed all-lowercase (checksum unverified), and
+   requires an explicit *Confirm & create* before the wallet is prompted. That
+   makes a wrong address much less likely — it does not make it impossible
+   (revocation is still not a feature): **paste, don't type**, and read the
+   read-back before confirming.
 2. **No admin / no pause** — immutable by design; nothing can be frozen later.
 3. **Shared pool** — all grantors' funds for the same token live in one contract;
    per-schedule accounting keeps releases independent.
