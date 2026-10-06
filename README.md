@@ -33,10 +33,12 @@ Example schedules on the deployed factory:
 | 6 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` passing run ([tx](https://sepolia.etherscan.io/tx/0xf6347485b19fc11484bb3e385d80b37ebaff9b4765b104ab3036f5ad48b68500)) |
 | 7 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` re-run after the dependency fix ([tx](https://sepolia.etherscan.io/tx/0xaa717c31bf927657af1e6247641d5456d3a79241667420863a8943c7a1d34916)) |
 | 8 | `0x8E691e…27140DB47` (owner) | 100 TEST | `live-e2e.mjs` run verifying the beneficiary read-back step in a real browser ([tx](https://sepolia.etherscan.io/tx/0x961d9c3cd42135090bd38255fec8f16bcb109609dc7f8bcf4f6b3c9efd0418cf)) |
+| 9 | `0x8E691e…27140DB47` (owner) | 10 TEST | `live-e2e.mjs` run re-verifying the create flow after the WalletConnect/Reown project id was set ([tx](https://sepolia.etherscan.io/tx/0x7afc7a9bc724fce38c0e979c3f11fefe819d5922a3ade57ef0d3dbe720b0bcfa)) |
 
 Ids 2, 4 and 5 also exist on-chain and are deliberately **not** deleted: 2 is a
 duplicate from a transient parser bug in the first smoke run, and 4 and 5 were
-development attempts of `live-e2e.mjs`.
+development attempts of `live-e2e.mjs`. Those three plus the six above account
+for **all 9** schedules the deployed factory currently holds.
 
 Screenshots are interleaved so the **deployed site** sits next to the **local
 build** for the same viewport — any drift between them is visible at a glance.
@@ -55,7 +57,7 @@ build** for the same viewport — any drift between them is visible at a glance.
 | Dashboard | ![Live dashboard mobile](docs/screenshots/live-dashboard-mobile.png) | ![Dashboard mobile](docs/screenshots/dashboard-mobile.png) |
 | Create schedule | — | ![Create schedule mobile](docs/screenshots/create-mobile.png) |
 
-**Live end-to-end run — real Sepolia tx, schedule id 7**
+**Live end-to-end run — real Sepolia tx, schedule id 9**
 
 | Pending tx | Creation record | Beneficiary dashboard |
 | ---------- | --------------- | --------------------- |
@@ -181,11 +183,12 @@ FOUNDRY_PROFILE=ci forge test      # what CI runs: fuzz 512, invariants 128
 # Coverage gate — fails below 95% line coverage on src/
 ./script/coverage-gate.sh
 
-# Gas snapshot — committed as .gas-snapshot (61 entries: every unit/fuzz test
-# plus all 6 invariants individually). CI runs the same suite, so an
-# unexpected gas change shows up as a diff on this file.
+# Gas snapshot — committed as .gas-snapshot (62 entries: every unit/fuzz test
+# plus all 6 invariants individually — count with `grep -c '' .gas-snapshot`,
+# NOT `wc -l`: the file has no trailing newline, so wc undercounts by one).
+# CI runs the same suite, so an unexpected gas change shows up as a diff here.
 forge snapshot
-# Frontend — lint, typecheck, 211 tests, build
+# Frontend — lint, typecheck, 217 tests, build
 cd frontend
 npm run lint && npm run typecheck && npm test && npm run build
 
@@ -287,9 +290,11 @@ the engineering rules (TDD, ≥ 95% coverage, merge gates), then each feature go
 (waves of test-first tasks) → `/speckit.checklist`. The full spec, plan,
 research, data model and task list live in
 [`specs/001-token-vesting-app/`](specs/001-token-vesting-app/) — the task file
-records every task together with the evidence that closed it, and all **68**
-are checked off, including the items that were open for the longest (local
-deploy, live URL, quickstart run, the release PR).
+records every task together with the evidence that closed it: **76 of 77** are
+checked off, including the items that were open for the longest (local deploy,
+live URL, quickstart run, the release PR). The one still open is **T076**, the
+in-browser verification with a real MetaMask — left unchecked rather than
+closed without the evidence.
 
 ## Security
 
